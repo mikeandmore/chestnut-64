@@ -1,0 +1,26 @@
+include config.ninja
+
+# KERNEL MAIN
+build kern/boot.o: asm kern/boot.asm
+build kern/main.o: cxx kern/main.cc
+build kern/terminal.o: cxx kern/terminal.cc
+
+# KERNEL BINARY
+build kernel.bin: ld kern/boot.o $
+                     kern/main.o $
+                     kern/terminal.o
+
+build '-(' '-)': phony
+
+# COMMANDS
+build run: qemu kRnel.iso
+
+# KERNEL ISO GENERATION
+build isofiles/boot/grub/grub.cfg: cp thirdparty/grub/grub.cfg | isofiles/boot/grub
+build isofiles/boot/kernel.bin: cp kernel.bin | isofiles/boot
+build isofiles/boot/grub/stage2: touch
+build kRnel.iso: genrescue isofiles | isofiles/boot/grub/grub.cfg $
+                                      isofiles/boot/kernel.bin $
+                                      isofiles/boot/grub/stage2
+
+default kRnel.iso

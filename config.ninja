@@ -1,0 +1,70 @@
+cflags = -O3 -ffreestanding -fno-builtin -nostdlib -nostdinc $
+   -fcolor-diagnostics -mcmodel=kernel -target x86_64-unknown-linux-gnu -c
+cxxflags = $cflags -fno-exceptions -fno-rtti
+rustlibflags = --opt-level=3 -Z no-landing-pads --target x86_64-unknown-linux-gnu
+rustflags = $rustlibflags -L install --emit=bc --crate-type=rlib
+ldflags = -T linker.ld -nodefaultlibs -melf_x86_64 -z max-page-size=0x1000
+asmflags = -f elf64
+
+rustc = rustc
+ld = ld
+cc = clang
+cxx = clang++
+asm = nasm
+qemu = qemu-system-x86_64
+xorriso = xorriso
+
+rule rustc
+   command = $rustc $rustflags -o $out.bc $in && $
+             $cc $cflags -o $out $out.bc && rm $out.bc
+   depfile = $out.d
+   deps = gcc
+   description = RUSTC $out
+
+rule rustc_lib
+   command = $rustc $rustlibflags -o $out $in
+   depfile = $out.d
+   deps = gcc
+   description = RUSTC_LIB $out
+
+rule cc
+   command = $cc $cflags -o $out $in
+   depfile = $out.d
+   deps = gcc
+   description = CC $out
+
+rule cxx
+   command = $cxx $cxxflags -o $out $in
+   depfile = $out.d
+   deps = gcc
+   description = CXX $out
+
+rule asm
+   command = $asm $asmflags -o $out $in
+   description = ASM $out
+
+rule ld
+   command = $ld $ldflags -o $out $in
+   description = LD $out
+
+rule cat
+   command = cat $in > $out
+   description = CAT $out
+
+rule cp
+   command = cp -r $in $out
+   description = CP $out
+
+rule touch
+   command = touch $out
+   description = TOUCH $out
+
+rule genrescue
+   command = cp thirdparty/grub/grub.img isofiles/boot/grub && $
+             $xorriso -as mkisofs -R -b boot/grub/grub.img -no-emul-boot $
+                     -boot-load-size 4 -boot-info-table -o $out $in
+   description = GENRESCUE $out
+
+rule qemu
+   command = $qemu -cdrom $in
+   description = QEMU $in
