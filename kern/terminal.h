@@ -3,7 +3,7 @@
 #ifndef TERMINAL_H
 #define TERMINAL_H
 
-#include "common.h"
+#include "libc/common.h"
 
 namespace kernel {
 
