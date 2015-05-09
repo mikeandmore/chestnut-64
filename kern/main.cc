@@ -10,5 +10,7 @@ __link void kernel_main(struct multiboot_mmap_entry *mem_map)
 	kernel::default_term->Reset();
 	//kernel::default_term->DrawString("Chestnut-64 OS booting...");
 	kernel::Console console;
-	console.print('a');
+	// console.putchar('a');
+	for (int i = 0; i < 100; i++)
+		console.printf("12345678901234567890");
 }

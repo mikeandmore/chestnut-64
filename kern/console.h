@@ -10,13 +10,13 @@ class Console
 public:
 	Console() : x(0), y(0) {}
 
+	void putchar(char ch);
+	void printf(const char *fmt, ...);
 private:
 	int x;
 	int y;
-
-public:
-	void print(char ch);
 };
+
 }
 
 #endif /* CONSOLE_H */
