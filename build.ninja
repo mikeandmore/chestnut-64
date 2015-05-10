@@ -4,11 +4,13 @@ include config.ninja
 build kern/boot.o: asm kern/boot.asm
 build kern/main.o: cxx kern/main.cc
 build kern/terminal.o: cxx kern/terminal.cc
+build kern/console.o: cxx kern/console.cc
 
 # KERNEL BINARY
 build kernel.bin: ld kern/boot.o $
                      kern/main.o $
-                     kern/terminal.o
+                     kern/terminal.o $
+                     kern/console.o $
 
 build '-(' '-)': phony
 
