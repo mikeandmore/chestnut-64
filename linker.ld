@@ -41,8 +41,8 @@ SECTIONS {
    _loadEnd = . - VIRT_BASE;
 
    .bss ALIGN(0x1000) : AT(ADDR(.bss) - VIRT_BASE) {
-      *(COMMON)
       *(.bss)
+      *(COMMON)
       *(.gnu.linkonce.b*)
    }
 

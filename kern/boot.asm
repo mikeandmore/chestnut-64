@@ -50,9 +50,9 @@ AddrTag:
    dw 0
    dd AddrTagEnd - AddrTag
    dd MbHdr
-   dd _loadStart
-   dd _loadEnd
-   dd _bssEnd
+   dd 0
+   dd 0
+   dd 0
 AddrTagEnd:
 
 align 8

@@ -8,11 +8,11 @@ namespace kernel {
 class Console
 {
 public:
-	Console() : x(0), y(0) {}
+	Console();
 
 	void putchar(char ch);
 	void printf(const char *fmt, ...);
-private:
+// private:
 	int x;
 	int y;
 };

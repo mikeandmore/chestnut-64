@@ -6,15 +6,18 @@ build kern/main.o: cxx kern/main.cc
 build kern/terminal.o: cxx kern/terminal.cc
 build kern/console.o: cxx kern/console.cc
 
+build kern/mm/allocator.o: cxx kern/mm/allocator.cc
+
 # KERNEL LIBC
 build kern/libc/string.o: cc kern/libc/string.c
 
 # KERNEL BINARY
 build kernel.bin: ld kern/boot.o $
+                     kern/libc/string.o $
                      kern/main.o $
                      kern/terminal.o $
                      kern/console.o $
-                     kern/libc/string.o $
+                     kern/mm/allocator.o $
 
 build '-(' '-)': phony
 

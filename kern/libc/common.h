@@ -23,4 +23,7 @@ typedef uint64 uintptr_t;
 
 #define __link extern "C"
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 #endif /* COMMON_H */

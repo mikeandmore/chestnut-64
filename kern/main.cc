@@ -1,16 +1,22 @@
 #include "libc/common.h"
+#include "libc/string.h"
 #include "terminal.h"
 #include "console.h"
 #include "multiboot2.h"
+#include "mm/allocator.h"
 
-__link void kernel_main(struct multiboot_mmap_entry *mem_map)
+__link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
 {
 	kernel::Terminal term;
 	kernel::default_term = &term; // this stack will never destroy
-	kernel::default_term->Reset();
-	//kernel::default_term->DrawString("Chestnut-64 OS booting...");
+	// kernel::default_term->Reset();
+	// kernel::default_term->DrawString("Chestnut-64 OS booting...");
 	kernel::Console console;
 	// console.putchar('a');
-	for (int i = 0; i < 100; i++)
-		console.printf("12345678901234567890");
+	// for (int i = 0; i < 100; i++)
+	kernel::Allocator default_alloc;
+	kernel::alloc = &default_alloc;
+	default_alloc.Init(boot_mem_map);
+
+	console.printf("%lx", kernel::alloc->total());
 }
