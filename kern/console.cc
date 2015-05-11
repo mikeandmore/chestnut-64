@@ -111,4 +111,6 @@ nextfmt:
 	va_end(ap);
 }
 
+Console *console = 0;
+
 }

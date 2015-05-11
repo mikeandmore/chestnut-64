@@ -12,10 +12,12 @@ public:
 
 	void putchar(char ch);
 	void printf(const char *fmt, ...);
-// private:
+private:
 	int x;
 	int y;
 };
+
+extern Console *console;
 
 }
 
