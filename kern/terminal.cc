@@ -8,7 +8,7 @@ void Terminal::DrawChar(char ch, Color fg, Color bg, uint8 x, uint8 y)
 {
 	if (x < 0 || x >= kVGAWidth || y < 0 || y >= kVGAHeight)
 		return;
-	uint8 idx = x + y * kVGAWidth;
+	uint16 idx = x + y * kVGAWidth;
 	u8 color = fg | bg << 4;
 	u16 val = ch;
 	val |= ((u16) color << 8);

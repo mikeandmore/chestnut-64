@@ -4,52 +4,51 @@
 
 namespace kernel {
 
-// static char copykVGABuffer[Terminal::kVGAWidth][Terminal::kVGAHeight];
+static char copykVGABuffer[Terminal::kVGAHeight][Terminal::kVGAWidth];
 
 Console::Console()
 	: x(0), y(0)
 {
-	// for (int i = 0; i < Terminal::kVGAWidth; i++) {
-	//  	for (int j = 0; j < Terminal::kVGAHeight; j++) {
-	//  		copykVGABuffer[i][j] = 0;
-	//  	}
-	// }
+	 for (int i = 0; i < Terminal::kVGAHeight; i++) {
+	  	for (int j = 0; j < Terminal::kVGAWidth; j++) {
+	  		copykVGABuffer[i][j] = 0;
+	  	}
+	 }
 }
 
 void Console::putchar(char ch)
 {
-#if 0
-	if(x >= Terminal::kVGAWidth) {
+	if (x >= Terminal::kVGAWidth) {
 		x = 0;
 		y += 1;
 	}
-	if(y >= Terminal::kVGAHeight) {
+	if (y >= Terminal::kVGAHeight) {
 		//copy the screen and move up one line...
-		for(int i = 0; i < Terminal::kVGAWidth; i++ ) {
-			for (int j = 0; j < Terminal::kVGAHeight - 1; j++) {
-				default_term->DrawChar(i);
-				copykVGABuffer[i][j] = copykVGABuffer[i][j + 1];
+		for(int i = 0; i < Terminal::kVGAHeight - 1; i++ ) {
+			for (int j = 0; j < Terminal::kVGAWidth; j++) {
+				copykVGABuffer[i][j] = copykVGABuffer[i + 1][j];
 			}
 		}
-		for (int i = 0; i < Terminal::kVGAWidth; i++) {
-			copykVGABuffer[i][Terminal::kVGAHeight - 1] = 0;
+		for (int j = 0; j < Terminal::kVGAWidth; j++) {
+			copykVGABuffer[Terminal::kVGAHeight - 1][j] = 0;
 		}
 
-		for (int i = 0; i < Terminal::kVGAWidth; i++) {
-			for (int j = 0; j < Terminal::kVGAHeight - 1; j++) {
-				default_term->DrawChar(copykVGABuffer[i][j], i, j);
+		for (int i = 0; i < Terminal::kVGAHeight; i++) {
+			for (int j = 0; j < Terminal::kVGAWidth; j++) {
+				default_term->DrawChar(copykVGABuffer[i][j], j, i);
 			}
-
 		}
 		//end of move the screen one line up
 		y = Terminal::kVGAHeight - 1;
 	}
-
+	if (ch == '\n') {
+		x = 0;
+		y++;
+		return;
+	}
 	default_term->DrawChar(ch, x, y);
-	copykVGABuffer[x][y] = ch;
+	copykVGABuffer[y][x] = ch;
 	x += 1;
-#endif
-	default_term->DrawChar(ch, x++, y);
 }
 
 void Console::printf(const char *fmt, ...)

@@ -18,5 +18,8 @@ __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
 	kernel::alloc = &default_alloc;
 	default_alloc.Init(boot_mem_map);
 
+	for(int i = 0; i < 100; i++) {
+		console.printf("0123456789\n");
+	}
 	console.printf("%lx", kernel::alloc->total());
 }
