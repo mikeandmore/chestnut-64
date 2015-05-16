@@ -21,6 +21,9 @@ extern long VIRT_BASE;
 
 namespace kernel {
 
+class MemCacheBase;
+class BaseSlab;
+
 class Page {
 public:
 	paddr physical_address() const { return phyaddr; }
@@ -32,6 +35,11 @@ friend class Allocator;
 
 	bool is_free;
 	bool is_in_list;
+public:
+	union {
+		MemCacheBase *cache;
+		BaseSlab *slab;
+	} slab_info;
 };
 
 class Allocator {
@@ -67,12 +75,8 @@ private:
 	// TODO: for Alloc/Free()
 };
 
-class SlabAllocator
-{
-
-};
-
 extern Allocator *alloc;
+
 }
 
 #endif /* ALLOCATOR_H */
