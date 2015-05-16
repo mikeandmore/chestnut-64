@@ -21,4 +21,7 @@ __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
 	console.printf("Chestnut-64 Booting...\n");
 
 	kernel::alloc->Init(boot_mem_map);
+
+
+
 }

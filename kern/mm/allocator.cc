@@ -64,8 +64,8 @@ void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
 	// [kend_pg, kend_pg + nr_pages_struct * PAGESIZE)
 	page_structs = (Page *) PADDR_TO_KPTR(kend_pg);
 
-	u64 init_cur_page = 0;
-	Page *last_page = NULL;
+	nr_page_structs = 0;
+	Page *last_page = &page_head;
 	for (int i = 0; i < nr_entries; i++) {
 		struct multiboot_mmap_entry *ent = &entries[i];
 		if (ent->type != MULTIBOOT_MEMORY_AVAILABLE) continue;
@@ -79,40 +79,82 @@ void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
 			if (paddr >= kstart_pg && paddr < kend_pg + struct_tot_sz) {
 			  	continue;
 			}
-			Page *pg = &page_structs[init_cur_page];
+			Page *pg = &page_structs[nr_page_structs];
 
-			pg->phyaddr = paddr; pg->alloc_next = NULL;
+			pg->phyaddr = paddr; pg->alloc_next = &page_head;
 			pg->is_free = true; pg->is_in_list = true;
-			if (last_page != NULL)
-				last_page->alloc_next = pg;
+			last_page->alloc_next = pg;
+			pg->alloc_prev = last_page;
 			last_page = pg;
-			init_cur_page++;
+			nr_page_structs++;
 		}
 
 	}
 	console->printf("Allocator: total pages: %ld available for alloc: %ld\n",
-			nr_pages, init_cur_page);
-	page_head = page_structs;
+			nr_pages, nr_page_structs);
 }
 
 
 Page *Allocator::AllocPage()
 {
-	return NULL;
+	if(page_head.alloc_next == page_head.alloc_prev)
+		return NULL;
+	Page *allocatored_page;
+	allocatored_page = page_head.alloc_next;
+	page_head.alloc_next = allocatored_page->alloc_next;
+	page_head.alloc_next->alloc_prev = &page_head;
+	allocatored_page->is_free = false;
+	allocatored_page->is_in_list = false;
+	return allocatored_page;
 }
 
 void Allocator::FreePage(Page *pg)
 {
-
+	pg->alloc_next = page_head.alloc_next;
+	page_head.alloc_next->alloc_prev = pg;
+	page_head.alloc_next = pg;
+	pg->alloc_prev = &page_head;
+	pg->is_free = true;
+	pg->is_in_list = true;
 }
 
 Page *Allocator::AllocPages(int n)
 {
-	return NULL;
+	int64 start = -1;
+	for (int64 i = 0; i < nr_page_structs; i++) {
+		if (!page_structs[i].is_free){
+			start = -1;
+			continue;
+		}
+		if (start == -1 && i > nr_page_structs - n )
+			break;
+		else if (start == -1)
+			start = i;
+		if (i == start + n - 1)
+			break;
+
+	}
+	if (start == -1)
+		return NULL;
+	for (int64 i = start; i < start + n; i++) {
+		page_structs[i].alloc_prev->alloc_next = page_structs[i].alloc_next;
+		page_structs[i].alloc_next->alloc_prev = page_structs[i].alloc_prev;
+		page_structs[i].is_free = false;
+		page_structs[i].is_in_list = false;
+	}
+	return &page_structs[start];
 }
 
 void Allocator::FreePages(Page *pg, int n)
 {
+	for (int64 i = 0; i < n; i++) {
+		pg[i].alloc_next = page_head.alloc_next;
+		page_head.alloc_next->alloc_prev = &pg[i];
+		page_head.alloc_next = &pg[i];
+		pg[i].alloc_prev = &page_head;
+		pg[i].is_free = true;
+		pg[i].is_in_list = true;
+	}
 
 }
 

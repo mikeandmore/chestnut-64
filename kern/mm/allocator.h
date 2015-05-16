@@ -22,11 +22,14 @@ extern long VIRT_BASE;
 namespace kernel {
 
 class Page {
+public:
 	paddr physical_address() const { return phyaddr; }
 private:
 friend class Allocator;
 	paddr phyaddr;
 	Page *alloc_next;
+	Page *alloc_prev;
+
 	bool is_free;
 	bool is_in_list;
 };
@@ -56,8 +59,9 @@ private:
 	u64 tot_size_;
 	u64 avail_low_;
 
-	Page *page_head; // free list
+	Page page_head; // free list (double linked_list)
 	Page *page_structs; // array of pages
+	int64 nr_page_structs;
 
 private:
 	// TODO: for Alloc/Free()
