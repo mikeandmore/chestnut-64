@@ -25,7 +25,7 @@ class BitmapSlab : public BaseBitmapSlab {
 protected:
 	// 1 means free slot, 0 means in use
 	u64 bitmap[NBitLine];
-	// reserved, might use for history buffer later
+	// reserved, might be used for history buffer later
 	u8 __padding[40 - NBitLine * sizeof(u64)];
 public:
 	int Alloc() {
@@ -38,10 +38,21 @@ public:
 
 	bool is_empty() {
 		// TODO: bitwise and all bitmap to see if it's 0xFFFF...
+		u64 bitsum = bitmap[0];
+		for (int i = 1; i < NBitLine; i++) {
+			bitsum &= bitmap[i];
+		}
+		return bitsum == 0xFFFFFFFF;
+
 	}
 
 	bool is_full() {
 		// TODO: bitwise or all bitmap to see if it's zero
+		u64 bitsum = bitmap[0];
+		for (int i = 1; i < NBitLine; i++) {
+			bitsum &= bitmap[i];
+		}
+		return bitsum == 0x00000000;
 	}
 };
 
