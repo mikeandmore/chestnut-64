@@ -82,8 +82,8 @@ public:
 	int Alloc();
 	void Free(int obj_idx);
 
-	bool is_empty();
-	bool is_full();
+	bool is_empty() { return nr_free == nr_total; }
+	bool is_full() { return nr_free == 0; }
 };
 
 template <class Slab, int ObjSize>

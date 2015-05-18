@@ -3,7 +3,8 @@
 
 namespace kernel {
 
-int BaseBitmapSlab::AllocFromBitmapArray(int n, u64 *bitmap_array) {
+int BaseBitmapSlab::AllocFromBitmapArray(int n, u64 *bitmap_array)
+{
 	//n represent the NBitsmap's N
 	int idx = 64;
 	int row = 0;
@@ -18,14 +19,16 @@ int BaseBitmapSlab::AllocFromBitmapArray(int n, u64 *bitmap_array) {
 	return idx + 64 * row;
 }
 
-void BaseBitmapSlab::FreeToBitmapArray(int n, u64 *bitmap_array, int obj_idx) {
+void BaseBitmapSlab::FreeToBitmapArray(int n, u64 *bitmap_array, int obj_idx)
+{
 	int row = obj_idx / 64;
 	int idx = obj_idx % 64;
 	bitmap_array[row] ^= (1 << idx);
 }
 
 
-void FreeListSlab::Init(int total) {
+void FreeListSlab::Init(int total)
+{
 	//total: how many objects will be in this page
 	nr_free = total;
 	nr_total = total;
@@ -34,21 +37,15 @@ void FreeListSlab::Init(int total) {
 	}
 }
 
-int FreeListSlab::Alloc() {
+int FreeListSlab::Alloc()
+{
 	return free_stack[--nr_free];
 }
 
-void FreeListSlab::Free(int obj_idx) {
+void FreeListSlab::Free(int obj_idx)
+{
 	free_stack[nr_free] = obj_idx;
 	nr_free++;
-}
-
-bool FreeListSlab::is_empty() {
-	return nr_free == nr_total;
-}
-
-bool FreeListSlab::is_full() {
-	return nr_free == 0;
 }
 
 class MetaSlab {
