@@ -19,6 +19,12 @@ struct ListNode {
 		parent->next = this;
 		next->prev = this;
 	}
+
+	void InitHead() {
+		next = prev = this;
+	}
+
+	bool is_empty() { return next == this; }
 };
 
 #endif /* LIST_H */

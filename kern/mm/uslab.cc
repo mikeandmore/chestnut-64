@@ -51,5 +51,87 @@ bool FreeListSlab::is_full() {
 	return nr_free == 0;
 }
 
+class MetaSlab {
+	ListNode node;
+	ListNode free_slab;
+	u8 nr_free_slab;
+	u8 __padding[39];
+public:
+	ListNode *list_node() { return &node; }
+	u8 *mem() { return (u8 *) this; }
+
+	bool is_empty() {
+		return nr_free_slab == 63;
+	}
+
+	bool is_full() {
+		return nr_free_slab == 0;
+	}
+
+	void Init(int total);
+	int Alloc();
+	void Free(int obj_idx);
+
+	static MetaSlab *AllocSlab();
+	static void FreeSlab(MetaSlab *slab);
+};
+
+void MetaSlab::Init(int total)
+{
+	free_slab.InitHead();
+	nr_free_slab = 63;
+	u8 *ptr = (u8 *) this;
+	ptr += 64;
+	for (int i = 0; i < 63; i++, ptr += 64) {
+		BaseSlab *real_slab = (BaseSlab *) ptr;
+		ListNode *real_slab_node = real_slab->list_node();
+		real_slab_node->InsertAfter(&free_slab);
+	}
+}
+
+int MetaSlab::Alloc()
+{
+	ListNode *node = free_slab.next;
+	node->Delete();
+	nr_free_slab--;
+	return ((u8 *) node - mem()) / 64;
+}
+
+void MetaSlab::Free(int obj_idx)
+{
+	ListNode *node = (ListNode *) (mem() + obj_idx + 64);
+	node->InsertAfter(&free_slab);
+	nr_free_slab++;
+}
+
+MetaSlab *MetaSlab::AllocSlab()
+{
+	Page *pg = alloc->AllocPage();
+	return (MetaSlab *) PADDR_TO_KPTR(pg->physical_address());
+}
+
+void MetaSlab::FreeSlab(MetaSlab *slab)
+{
+	Page *pg = alloc->page(KPTR_TO_PADDR(slab));
+	alloc->FreePage(pg);
+}
+
+static MemCache<MetaSlab, 64> meta_slab;
+
+BaseSlab *BaseSlab::AllocSlab()
+{
+	return (BaseSlab *) meta_slab.Allocate();
+}
+
+void BaseSlab::FreeSlab(BaseSlab *slab)
+{
+	meta_slab.Free(slab);
+}
+
+void InitSlab()
+{
+	meta_slab.Init(0);
+	// TODO: buddy allocation cache
+}
 
 }

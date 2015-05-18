@@ -1,3 +1,4 @@
+#include "libc/string.h"
 #include "allocator.h"
 #include "console.h"
 
@@ -56,39 +57,47 @@ void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
 	u64 kstart_pg = PG((u64) &_loadStart);
 	u64 kend_pg = PGALIGN((u64) &_bssEnd) + kBootLoaderSkipPages * PAGESIZE;
 
-	// should be aligned to page size already
-	u64 nr_pages = available() / PAGESIZE;
+	u64 nr_pages = PGALIGN(total()) / PAGESIZE;
 	u64 struct_tot_sz = sizeof(Page) * nr_pages;
 	u64 nr_pages_struct = PGALIGN(struct_tot_sz) / PAGESIZE;
 	// we store them right after the kernel, which is starting from
 	// [kend_pg, kend_pg + nr_pages_struct * PAGESIZE)
 	page_structs = (Page *) PADDR_TO_KPTR(kend_pg);
+	memset(page_structs, 0, struct_tot_sz);
 
 	nr_page_structs = 0;
 	Page *last_page = &page_head;
 	for (int i = 0; i < nr_entries; i++) {
 		struct multiboot_mmap_entry *ent = &entries[i];
-		if (ent->type != MULTIBOOT_MEMORY_AVAILABLE) continue;
-		if (ent->addr == 0) continue;
+		if (ent->type != MULTIBOOT_MEMORY_AVAILABLE || ent->addr == 0)
+			continue;
 
 		for (u64 paddr = ent->addr; paddr < ent->addr + ent->len;
 		     paddr += PAGESIZE) {
+			if (PGNUM(paddr) >= nr_pages) {
+				console->printf("WTF: overflow %x for 0x%x "
+						"addr %lx len %x\n",
+						PGNUM(paddr), paddr, ent->addr,
+						ent->len);
+				continue;
+			}
+			Page *pg = &page_structs[PGNUM(paddr)];
+			pg->phyaddr = PG(paddr);
+
 			// if this address is in kernel image, bss, bootloader
 			// data or page of pages, then we ignore them, and
 			// therefore they won't be allocated
 			if (paddr >= kstart_pg && paddr < kend_pg + struct_tot_sz) {
-			  	continue;
+			  	pg->is_free = false; pg->is_in_list = false;
+			} else {
+				pg->is_free = true; pg->is_in_list = true;
+				pg->alloc_next = &page_head;
+				pg->alloc_prev = last_page;
+				last_page = pg;
+				last_page->alloc_next = pg;
 			}
-			Page *pg = &page_structs[nr_page_structs];
-
-			pg->phyaddr = paddr; pg->alloc_next = &page_head;
-			pg->is_free = true; pg->is_in_list = true;
-			last_page->alloc_next = pg;
-			pg->alloc_prev = last_page;
-			last_page = pg;
 			nr_page_structs++;
 		}
-
 	}
 	console->printf("Allocator: total pages: %ld available for alloc: %ld\n",
 			nr_pages, nr_page_structs);

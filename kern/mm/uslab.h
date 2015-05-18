@@ -11,6 +11,12 @@ class BaseSlab {
 protected:
 	ListNode node; // for the full/half/empty queue
 	Page *data_page;
+public:
+	ListNode *list_node() { return &node; }
+	u8 *mem() { return (u8 *) PADDR_TO_KPTR(data_page->physical_address()); }
+
+	static BaseSlab *AllocSlab();
+	static void FreeSlab(BaseSlab *slab);
 };
 
 class BaseBitmapSlab : public BaseSlab {
@@ -80,29 +86,80 @@ public:
 	bool is_full();
 };
 
-struct MetaSlabPageHeader {
-	ListNode node;
-	struct BaseSlab *slab_next; // slab free list in this page
-};
-
-class MemCacheBase {
+template <class Slab, int ObjSize>
+class MemCache {
 	struct {
 		ListNode full, half, empty;
 	} slab_queue;
-
 	struct {
-		ListNode full, half;
-	} page_queue;
-
-	struct {
-		u64 allocated, pool_size;
+		u64 allocated, slab_pg, max_pg;
 	} stat;
+public:
+	bool ReclaimEmptySlab(Slab *slab) {
+		if (stat.slab_pg <= stat.max_pg) return false;
+		Slab::FreeSlab(slab);
+		return true;
+	}
+	void AdjustSlab(Slab *slab) {
+		ListNode *node = slab->list_node();
+		node->Delete();
+		if (slab->is_full()) {
+			node->InsertAfter(&slab_queue.full);
+		} else if (slab->is_empty()) {
+			if (!ReclaimEmptySlab())
+				node->InsertAfter(&slab_queue.empty);
+
+		} else {
+			node->InsertAfter(&slab_queue.half);
+		}
+	}
+
+	void set_max_page(u64 max_page) { stat.max_pg = max_page; }
+	u64 max_page() { return stat.max_pg; }
+
+	void Init(u64 max_page) {
+		stat.allocated = 0;
+		set_max_page(max_page);
+		slab_queue.full.InitHead();
+		slab_queue.half.InitHead();
+		slab_queue.empty.InitHead();
+	}
+
+	void *Allocate() {
+		Slab *slab = NULL;
+		if (slab_queue.half.is_empty()) {
+			if (slab_queue.empty.is_empty()) {
+				slab = Slab::AllocSlab();
+				slab->Init(PAGESIZE / ObjSize);
+			} else {
+				ListNode *node = slab_queue.empty.next;
+				node->Delete();
+				slab = (Slab *) node;
+			}
+			slab->list_node().InsertAfter(&slab_queue.half);
+		}
+
+		slab = (Slab *) slab_queue.half.next;
+		int idx = slab->Alloc();
+		u8* mem = slab->mem();
+		stat.allocated++;
+		AdjustSlab(slab);
+		return mem + idx * ObjSize;
+	}
+
+	void Free(void *ptr) {
+		// use the struct page to find its slab
+		paddr addr = KPTR_TO_PADDR(ptr);
+		Page *pg = alloc->page(addr);
+		Slab *slab = (Slab *) pg->slab_ptr;
+		int idx = (addr - PG(addr)) / ObjSize;
+		slab->Free(idx);
+		stat.allocated--;
+		AdjustSlab(slab);
+	}
 };
 
-template <class Slab>
-class MemCache : public MemCacheBase {
-
-};
+void InitSlab();
 
 }
 

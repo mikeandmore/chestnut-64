@@ -18,6 +18,7 @@ typedef u64 paddr;
 extern long VIRT_BASE;
 
 #define PADDR_TO_KPTR(paddr) ((void *) ((u64) paddr + (u64) &VIRT_BASE))
+#define KPTR_TO_PADDR(ptr) ((u64) ptr - (u64) &VIRT_BASE)
 
 namespace kernel {
 
@@ -36,10 +37,7 @@ friend class Allocator;
 	bool is_free;
 	bool is_in_list;
 public:
-	union {
-		MemCacheBase *cache;
-		BaseSlab *slab;
-	} slab_info;
+	void *slab_ptr;
 };
 
 class Allocator {
@@ -57,6 +55,8 @@ public:
 	void FreePage(Page *pg);
 	Page *AllocPages(int n);
 	void FreePages(Page *pg, int n);
+
+	Page *page(paddr addr) { return &page_structs[PGNUM(addr)]; }
 private:
 	static const int kBootLoaderSkipPages = 4;
 	void CollectAvailable(struct multiboot_mmap_entry *entries,
