@@ -11,10 +11,12 @@ build kern/mm/uslab.o: cxx kern/mm/uslab.cc
 
 # KERNEL LIBC
 build kern/libc/string.o: cc kern/libc/string.c
+build kern/libc/cxxrt.o: cxx kern/libc/cxxrt.cc
 
 # KERNEL BINARY
 build kernel.bin: ld kern/boot.o $
                      kern/libc/string.o $
+                     kern/libc/cxxrt.o $
                      kern/main.o $
                      kern/terminal.o $
                      kern/console.o $

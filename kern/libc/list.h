@@ -6,17 +6,16 @@ struct ListNode {
 	ListNode *prev, *next;
 
 	void Delete() {
-		// TODO: here
 		prev->next = next;
 		next->prev = prev;
+		// next = prev = 0;
 	}
 
 	void InsertAfter(ListNode *parent) {
-		// TODO: here
 		next = parent->next;
 		prev = parent;
 
-		parent->next = this;
+		prev->next = this;
 		next->prev = this;
 	}
 

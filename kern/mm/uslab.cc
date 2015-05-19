@@ -1,11 +1,11 @@
 // -*- c++ -*-
+#include "libc/common.h"
 #include "uslab.h"
 
 namespace kernel {
 
 int BaseBitmapSlab::AllocFromBitmapArray(int n, u64 *bitmap_array)
 {
-	//n represent the NBitsmap's N
 	int idx = 64;
 	int row = 0;
 	for (int i = 0; i < n; i++) {
@@ -16,20 +16,18 @@ int BaseBitmapSlab::AllocFromBitmapArray(int n, u64 *bitmap_array)
 		}
 	}
 	bitmap_array[row] ^= (1 << idx);
-	return idx + 64 * row;
+	return idx * n + row;
 }
 
 void BaseBitmapSlab::FreeToBitmapArray(int n, u64 *bitmap_array, int obj_idx)
 {
-	int row = obj_idx / 64;
-	int idx = obj_idx % 64;
+	int row = obj_idx % n;
+	int idx = obj_idx / n;
 	bitmap_array[row] ^= (1 << idx);
 }
 
-
 void FreeListSlab::Init(int total)
 {
-	//total: how many objects will be in this page
 	nr_free = total;
 	nr_total = total;
 	for (int i = 0; i < total; i++) {
@@ -78,6 +76,7 @@ void MetaSlab::Init(int total)
 	nr_free_slab = 63;
 	u8 *ptr = (u8 *) this;
 	ptr += 64;
+	kassert(total == 64);
 	for (int i = 0; i < 63; i++, ptr += 64) {
 		BaseSlab *real_slab = (BaseSlab *) ptr;
 		ListNode *real_slab_node = real_slab->list_node();
@@ -89,12 +88,16 @@ int MetaSlab::Alloc()
 {
 	ListNode *node = free_slab.next;
 	node->Delete();
+	kassert(nr_free_slab > 0);
 	nr_free_slab--;
-	return ((u8 *) node - mem()) / 64;
+	int idx = ((u8 *) node - mem()) / 64;
+	kassert(idx > 0 && idx < 64);
+	return idx;
 }
 
 void MetaSlab::Free(int obj_idx)
 {
+	kassert(obj_idx > 0 && obj_idx < 64);
 	ListNode *node = (ListNode *) (mem() + obj_idx * 64);
 	node->InsertAfter(&free_slab);
 	nr_free_slab++;
@@ -117,6 +120,15 @@ void MetaSlab::FreeSlab(MetaSlab *slab)
 
 static MemCache<MetaSlab, 64> meta_slab_cache;
 
+static MemCache<BitmapSlab<4>, 16> chunk16_cache;
+static MemCache<BitmapSlab<2>, 32> chunk32_cache;
+static MemCache<BitmapSlab<1>, 64> chunk64_cache;
+static MemCache<FreeListSlab, 128> chunk128_cache;
+static MemCache<FreeListSlab, 256> chunk256_cache;
+static MemCache<FreeListSlab, 512> chunk512_cache;
+static MemCache<FreeListSlab, 1024> chunk1024_cache;
+static MemCache<FreeListSlab, 2048> chunk2048_cache;
+
 BaseSlab *BaseSlab::AllocSlab(int obj_size)
 {
 	BaseSlab *slab = (BaseSlab *) meta_slab_cache.Allocate();
@@ -131,29 +143,54 @@ void BaseSlab::FreeSlab(BaseSlab *slab)
 	meta_slab_cache.Free(slab);
 }
 
+void MemCacheBase::Init(u64 max_page)
+{
+	stat.allocated = 0;
+	set_max_page(max_page);
+	slab_queue.full.InitHead();
+	slab_queue.half.InitHead();
+	slab_queue.empty.InitHead();
+}
+
+static const int max = 4096;
+static void *p[max];
+
 void InitSlab()
 {
+	MemCacheBase *cache = NULL;
+
+	// placement new
+	// WTF: I have no idea why static variable with virtual functions were
+	// put in the .bss section. With placement new, we can reinitialize them
+	new (&meta_slab_cache) MemCache<MetaSlab, 64>;
+	new (&chunk16_cache) MemCache<BitmapSlab<4>, 16>;
+
 	meta_slab_cache.Init(0);
+	chunk16_cache.Init(0);
 	// TODO: buddy allocation cache
 
 	// testing...
-	void *p[128];
+	cache = &chunk16_cache;
 	for (int j = 0; j < 3; j++) {
-		for (int i = 0; i < 128; i++) {
-			p[i] = meta_slab_cache.Allocate();
+		for (int i = 0; i < max; i++) {
+			p[i] = cache->Allocate();
 		}
-		for (int i = 64; i < 128; i++) {
-			meta_slab_cache.Free(p[i]);
+		cache->PrintStat();
+		for (int i = max / 2; i < max; i++) {
+			cache->Free(p[i]);
 		}
-		for (int i = 64; i < 72; i++) {
-			p[i] = meta_slab_cache.Allocate();
+		cache->PrintStat();
+
+		for (int i = max / 2; i < max; i++) {
+			p[i] = cache->Allocate();
 		}
-		for (int i = 0; i < 72; i++) {
-			meta_slab_cache.Free(p[i]);
+		for (int i = 0; i < max; i++) {
+			cache->Free(p[i]);
+
 		}
+		cache->PrintStat();
 	}
 
-	meta_slab_cache.PrintStat();
 }
 
 }

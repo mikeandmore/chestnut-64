@@ -66,13 +66,11 @@ void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
 	page_structs = (Page *) PADDR_TO_KPTR(kend_pg);
 	memset(page_structs, 0, struct_tot_sz);
 
-	nr_page_structs = 0;
 	Page *last_page = &page_head;
 	for (int i = 0; i < nr_entries; i++) {
 		struct multiboot_mmap_entry *ent = &entries[i];
 		if (ent->type != MULTIBOOT_MEMORY_AVAILABLE || ent->addr == 0)
 			continue;
-
 		for (u64 paddr = ent->addr; paddr < ent->addr + ent->len;
 		     paddr += PAGESIZE) {
 			kassert(PGNUM(paddr) < nr_pages);
@@ -90,7 +88,6 @@ void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
 				pg->alloc_prev = last_page;
 				page_head.alloc_prev = pg;
 				last_page->alloc_next = pg;
-
 				last_page = pg;
 			}
 		}

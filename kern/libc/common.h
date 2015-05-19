@@ -19,9 +19,15 @@ typedef uint64 u64;
 typedef uint64 size_t;
 typedef uint64 uintptr_t;
 
+typedef unsigned long ulong;
+
 #define NULL 0
 
+#ifdef __cplusplus
 #define __link extern "C"
+#else
+#define __link
+#endif
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -40,5 +46,15 @@ typedef uint64 uintptr_t;
 		if (!(expr))					\
 			panic("Assertion Error on " #expr);	\
 	} while (0)						\
+
+#ifdef __cplusplus
+
+// placement new
+inline void *operator new(ulong, void *p)     throw() { return p; }
+inline void *operator new[](ulong, void *p)   throw() { return p; }
+inline void  operator delete  (void *, void *) throw() { };
+inline void  operator delete[](void *, void *) throw() { };
+
+#endif
 
 #endif /* COMMON_H */

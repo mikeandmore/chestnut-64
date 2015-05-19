@@ -3,7 +3,9 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 void memcpy(void *dst, const void *src, int len);
 void memset(void *b, int c, size_t len);
@@ -17,6 +19,8 @@ char *strchr(const char *s, char ch);
 
 size_t strlen(const char *s);
 
+#ifdef __cplusplus
 }
+#endif
 
 #endif /* STRING_H */
