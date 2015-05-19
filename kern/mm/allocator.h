@@ -38,6 +38,7 @@ friend class Allocator;
 	bool is_in_list;
 public:
 	void *slab_ptr;
+	int slab_obj_size;
 };
 
 class Allocator {

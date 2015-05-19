@@ -1,3 +1,4 @@
+#include "libc/common.h"
 #include "libc/string.h"
 #include "allocator.h"
 #include "console.h"
@@ -74,13 +75,7 @@ void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
 
 		for (u64 paddr = ent->addr; paddr < ent->addr + ent->len;
 		     paddr += PAGESIZE) {
-			if (PGNUM(paddr) >= nr_pages) {
-				console->printf("WTF: overflow %x for 0x%x "
-						"addr %lx len %x\n",
-						PGNUM(paddr), paddr, ent->addr,
-						ent->len);
-				continue;
-			}
+			kassert(PGNUM(paddr) < nr_pages);
 			Page *pg = &page_structs[PGNUM(paddr)];
 			pg->phyaddr = PG(paddr);
 
@@ -93,14 +88,14 @@ void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
 				pg->is_free = true; pg->is_in_list = true;
 				pg->alloc_next = &page_head;
 				pg->alloc_prev = last_page;
-				last_page = pg;
+				page_head.alloc_prev = pg;
 				last_page->alloc_next = pg;
+
+				last_page = pg;
 			}
-			nr_page_structs++;
 		}
 	}
-	console->printf("Allocator: total pages: %ld available for alloc: %ld\n",
-			nr_pages, nr_page_structs);
+	nr_page_structs = nr_pages;
 }
 
 

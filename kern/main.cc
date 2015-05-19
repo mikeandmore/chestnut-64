@@ -4,6 +4,7 @@
 #include "console.h"
 #include "multiboot2.h"
 #include "mm/allocator.h"
+#include "mm/uslab.h"
 
 __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
 {
@@ -21,4 +22,5 @@ __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
 	console.printf("Chestnut-64 Booting...\n");
 
 	kernel::alloc->Init(boot_mem_map);
+	kernel::InitSlab();
 }

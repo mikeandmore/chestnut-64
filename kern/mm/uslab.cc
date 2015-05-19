@@ -52,7 +52,6 @@ class MetaSlab {
 	ListNode node;
 	ListNode free_slab;
 	u8 nr_free_slab;
-	u8 __padding[39];
 public:
 	ListNode *list_node() { return &node; }
 	u8 *mem() { return (u8 *) this; }
@@ -69,7 +68,7 @@ public:
 	int Alloc();
 	void Free(int obj_idx);
 
-	static MetaSlab *AllocSlab();
+	static MetaSlab *AllocSlab(int obj_size);
 	static void FreeSlab(MetaSlab *slab);
 };
 
@@ -96,15 +95,18 @@ int MetaSlab::Alloc()
 
 void MetaSlab::Free(int obj_idx)
 {
-	ListNode *node = (ListNode *) (mem() + obj_idx + 64);
+	ListNode *node = (ListNode *) (mem() + obj_idx * 64);
 	node->InsertAfter(&free_slab);
 	nr_free_slab++;
 }
 
-MetaSlab *MetaSlab::AllocSlab()
+MetaSlab *MetaSlab::AllocSlab(int obj_size)
 {
 	Page *pg = alloc->AllocPage();
-	return (MetaSlab *) PADDR_TO_KPTR(pg->physical_address());
+	MetaSlab *slab = (MetaSlab *) PADDR_TO_KPTR(pg->physical_address());
+	pg->slab_ptr = slab;
+	pg->slab_obj_size = obj_size;
+	return slab;
 }
 
 void MetaSlab::FreeSlab(MetaSlab *slab)
@@ -113,22 +115,45 @@ void MetaSlab::FreeSlab(MetaSlab *slab)
 	alloc->FreePage(pg);
 }
 
-static MemCache<MetaSlab, 64> meta_slab;
+static MemCache<MetaSlab, 64> meta_slab_cache;
 
-BaseSlab *BaseSlab::AllocSlab()
+BaseSlab *BaseSlab::AllocSlab(int obj_size)
 {
-	return (BaseSlab *) meta_slab.Allocate();
+	BaseSlab *slab = (BaseSlab *) meta_slab_cache.Allocate();
+	Page *pg = slab->data_page = alloc->AllocPage();
+	pg->slab_ptr = slab;
+	pg->slab_obj_size = obj_size;
+	return slab;
 }
 
 void BaseSlab::FreeSlab(BaseSlab *slab)
 {
-	meta_slab.Free(slab);
+	meta_slab_cache.Free(slab);
 }
 
 void InitSlab()
 {
-	meta_slab.Init(0);
+	meta_slab_cache.Init(0);
 	// TODO: buddy allocation cache
+
+	// testing...
+	void *p[128];
+	for (int j = 0; j < 3; j++) {
+		for (int i = 0; i < 128; i++) {
+			p[i] = meta_slab_cache.Allocate();
+		}
+		for (int i = 64; i < 128; i++) {
+			meta_slab_cache.Free(p[i]);
+		}
+		for (int i = 64; i < 72; i++) {
+			p[i] = meta_slab_cache.Allocate();
+		}
+		for (int i = 0; i < 72; i++) {
+			meta_slab_cache.Free(p[i]);
+		}
+	}
+
+	meta_slab_cache.PrintStat();
 }
 
 }

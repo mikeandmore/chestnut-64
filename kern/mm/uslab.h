@@ -2,8 +2,10 @@
 #ifndef USLAB_H
 #define USLAB_H
 
+#include "libc/common.h"
 #include "mm/allocator.h"
 #include "libc/list.h"
+#include "console.h"
 
 namespace kernel {
 
@@ -15,7 +17,7 @@ public:
 	ListNode *list_node() { return &node; }
 	u8 *mem() { return (u8 *) PADDR_TO_KPTR(data_page->physical_address()); }
 
-	static BaseSlab *AllocSlab();
+	static BaseSlab *AllocSlab(int obj_size);
 	static void FreeSlab(BaseSlab *slab);
 };
 
@@ -97,6 +99,7 @@ class MemCache {
 public:
 	bool ReclaimEmptySlab(Slab *slab) {
 		if (stat.slab_pg <= stat.max_pg) return false;
+		stat.slab_pg--;
 		Slab::FreeSlab(slab);
 		return true;
 	}
@@ -106,7 +109,7 @@ public:
 		if (slab->is_full()) {
 			node->InsertAfter(&slab_queue.full);
 		} else if (slab->is_empty()) {
-			if (!ReclaimEmptySlab())
+			if (!ReclaimEmptySlab(slab))
 				node->InsertAfter(&slab_queue.empty);
 
 		} else {
@@ -129,16 +132,16 @@ public:
 		Slab *slab = NULL;
 		if (slab_queue.half.is_empty()) {
 			if (slab_queue.empty.is_empty()) {
-				slab = Slab::AllocSlab();
+				slab = Slab::AllocSlab(ObjSize);
 				slab->Init(PAGESIZE / ObjSize);
+				stat.slab_pg++;
 			} else {
 				ListNode *node = slab_queue.empty.next;
 				node->Delete();
 				slab = (Slab *) node;
 			}
-			slab->list_node().InsertAfter(&slab_queue.half);
+			slab->list_node()->InsertAfter(&slab_queue.half);
 		}
-
 		slab = (Slab *) slab_queue.half.next;
 		int idx = slab->Alloc();
 		u8* mem = slab->mem();
@@ -157,10 +160,16 @@ public:
 		stat.allocated--;
 		AdjustSlab(slab);
 	}
+
+	void PrintStat() {
+		console->printf("allocated: %ld pg %ld max_pag %ld\n",
+				stat.allocated, stat.slab_pg, stat.max_pg);
+	}
 };
 
 void InitSlab();
 
 }
+
 
 #endif /* USLAB_H */
