@@ -29,13 +29,13 @@ rule rustc_lib
    description = RUSTC_LIB $out
 
 rule cc
-   command = $cc $cflags -o $out $in
+   command = $cc $cflags -o $out $in -MMD -MF $out.d
    depfile = $out.d
    deps = gcc
    description = CC $out
 
 rule cxx
-   command = $cxx $cxxflags -o $out $in
+   command = $cxx $cxxflags -o $out $in -MMD -MF $out.d
    depfile = $out.d
    deps = gcc
    description = CXX $out

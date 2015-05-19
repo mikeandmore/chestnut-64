@@ -7,6 +7,7 @@ build kern/terminal.o: cxx kern/terminal.cc
 build kern/console.o: cxx kern/console.cc
 
 build kern/mm/allocator.o: cxx kern/mm/allocator.cc
+build kern/mm/uslab.o: cxx kern/mm/uslab.cc
 
 # KERNEL LIBC
 build kern/libc/string.o: cc kern/libc/string.c
@@ -18,6 +19,7 @@ build kernel.bin: ld kern/boot.o $
                      kern/terminal.o $
                      kern/console.o $
                      kern/mm/allocator.o $
+                     kern/mm/uslab.o $
 
 build '-(' '-)': phony
 
