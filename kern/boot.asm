@@ -168,7 +168,7 @@ use64
    call kernel_main
 
    cli
-   jmp $
+   hlt
 
 use32
 [extern Pml4]
