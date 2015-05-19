@@ -28,6 +28,12 @@ protected:
 	// reserved, might be used for history buffer later
 	u8 __padding[40 - NBitLine * sizeof(u64)];
 public:
+	void Init(int total) {
+		for (int i = 0; i < NBitLine; i++) {
+			bitmap[i] = -1LL;
+		}
+
+	}
 	int Alloc() {
 		// TODO: implement, right here
 		return AllocFromBitmapArray(NBitLine, bitmap);
