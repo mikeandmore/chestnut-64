@@ -30,10 +30,12 @@ protected:
 public:
 	int Alloc() {
 		// TODO: implement, right here
+		return AllocFromBitmapArray(NBitLine, bitmap);
 	}
 
 	void Free(int obj_idx) {
 		// TODO: implement, right here
+		FreeToBitmapArray(NBitLine, bitmap, obj_idx);
 	}
 
 	bool is_empty() {
@@ -42,7 +44,7 @@ public:
 		for (int i = 1; i < NBitLine; i++) {
 			bitsum &= bitmap[i];
 		}
-		return bitsum == 0xFFFFFFFF;
+		return bitsum == -1LL;
 
 	}
 
@@ -52,7 +54,8 @@ public:
 		for (int i = 1; i < NBitLine; i++) {
 			bitsum &= bitmap[i];
 		}
-		return bitsum == 0x00000000;
+		//0ULL unsigned long long
+		return bitsum == 0ULL;
 	}
 };
 
