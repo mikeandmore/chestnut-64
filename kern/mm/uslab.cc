@@ -23,4 +23,32 @@ void BaseBitmapSlab::FreeToBitmapArray(int n, u64 *bitmap_array, int obj_idx) {
 	bitmap_array[row] ^= (1 << idx);
 }
 
+
+void FreeListSlab::Init(int total) {
+	//total: how many objects will be in this page
+	nr_free = total;
+	nr_total = total;
+	for (int i = 0; i < total; i++) {
+		free_stack[i] = i;
+	}
+}
+
+int FreeListSlab::Alloc() {
+	return free_stack[--nr_free];
+}
+
+void FreeListSlab::Free(int obj_idx) {
+	free_stack[nr_free] = obj_idx;
+	nr_free++;
+}
+
+bool FreeListSlab::is_empty() {
+	return nr_free == nr_total;
+}
+
+bool FreeListSlab::is_full() {
+	return nr_free == 0;
+}
+
+
 }

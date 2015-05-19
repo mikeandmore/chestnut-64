@@ -62,9 +62,11 @@ public:
 class FreeListSlab : public BaseSlab {
 protected:
 	u8 nr_free;
-	u8 free_stack[39];
+	u8 nr_total;
+	u8 free_stack[38];
 public:
 	// TODO:
+	void Init(int total);
 	int Alloc();
 	void Free(int obj_idx);
 
