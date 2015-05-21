@@ -143,54 +143,27 @@ void BaseSlab::FreeSlab(BaseSlab *slab)
 	meta_slab_cache.Free(slab);
 }
 
-void MemCacheBase::Init(u64 max_page)
+MemCacheBase::MemCacheBase()
 {
 	stat.allocated = 0;
-	set_max_page(max_page);
 	slab_queue.full.InitHead();
 	slab_queue.half.InitHead();
 	slab_queue.empty.InitHead();
 }
 
-static const int max = 4096;
-static void *p[max];
-
 void InitSlab()
 {
-	MemCacheBase *cache = NULL;
+	// placement new all global caches
+	new (&meta_slab_cache) MemCache<MetaSlab, 64>();
 
-	// placement new
-	// WTF: I have no idea why static variable with virtual functions were
-	// put in the .bss section. With placement new, we can reinitialize them
-	new (&meta_slab_cache) MemCache<MetaSlab, 64>;
-	new (&chunk16_cache) MemCache<BitmapSlab<4>, 16>;
-
-	meta_slab_cache.Init(0);
-	chunk16_cache.Init(0);
-	// TODO: buddy allocation cache
-
-	// testing...
-	cache = &chunk16_cache;
-	for (int j = 0; j < 3; j++) {
-		for (int i = 0; i < max; i++) {
-			p[i] = cache->Allocate();
-		}
-		cache->PrintStat();
-		for (int i = max / 2; i < max; i++) {
-			cache->Free(p[i]);
-		}
-		cache->PrintStat();
-
-		for (int i = max / 2; i < max; i++) {
-			p[i] = cache->Allocate();
-		}
-		for (int i = 0; i < max; i++) {
-			cache->Free(p[i]);
-
-		}
-		cache->PrintStat();
-	}
-
+	new (&chunk16_cache) MemCache<BitmapSlab<4>, 16>();
+	new (&chunk32_cache) MemCache<BitmapSlab<2>, 32>();
+	new (&chunk64_cache) MemCache<BitmapSlab<1>, 64>();
+	new (&chunk128_cache) MemCache<FreeListSlab, 128>;
+	new (&chunk256_cache) MemCache<FreeListSlab, 256>;
+	new (&chunk512_cache) MemCache<FreeListSlab, 512>;
+	new (&chunk1024_cache) MemCache<FreeListSlab, 1024>;
+	new (&chunk2048_cache) MemCache<FreeListSlab, 2048>;
 }
 
 }

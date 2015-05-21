@@ -88,10 +88,12 @@ protected:
 		u64 allocated, slab_pg, max_pg;
 	} stat;
 public:
-	void Init(u64 max_page);
+	MemCacheBase();
 
 	virtual void *Allocate() = 0;
 	virtual void Free(void *ptr) = 0;
+
+	virtual MemCacheBase *CreateNew() = 0;
 
 	void set_max_page(u64 max_page) { stat.max_pg = max_page; }
 	u64 max_page() { return stat.max_pg; }
@@ -101,6 +103,9 @@ public:
 				stat.allocated, stat.slab_pg, stat.max_pg);
 	}
 };
+
+// buddy allocation
+MemCacheBase *FitGlobalMemCache(int obj_size);
 
 template <class Slab, int ObjSize>
 class MemCache : public MemCacheBase {
@@ -159,6 +164,16 @@ public:
 		slab->Free(idx);
 		stat.allocated--;
 		AdjustSlab(slab);
+	}
+
+	virtual MemCacheBase *CreateNew() {
+		int this_size = sizeof(MemCache<Slab, ObjSize>);
+		MemCacheBase *global_cache = FitGlobalMemCache(this_size);
+		MemCache<Slab, ObjSize> *new_ins =
+			(MemCache<Slab, ObjSize> *) global_cache->Allocate();
+		// placement new, call constructor
+		new (new_ins) MemCache<Slab, ObjSize>();
+		return new_ins;
 	}
 };
 
