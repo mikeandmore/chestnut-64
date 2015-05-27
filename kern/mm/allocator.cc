@@ -121,6 +121,8 @@ void Allocator::FreePage(Page *pg)
 
 Page *Allocator::AllocPages(int n)
 {
+	if (n == 1) return AllocPage();
+
 	int64 start = -1;
 	for (int64 i = 0; i < nr_page_structs; i++) {
 		if (!page_structs[i].is_free){
@@ -148,6 +150,10 @@ Page *Allocator::AllocPages(int n)
 
 void Allocator::FreePages(Page *pg, int n)
 {
+	if (n == 1) {
+		FreePage(pg);
+		return;
+	}
 	for (int64 i = 0; i < n; i++) {
 		pg[i].alloc_next = page_head.alloc_next;
 		page_head.alloc_next->alloc_prev = &pg[i];
