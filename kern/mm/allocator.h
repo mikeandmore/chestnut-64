@@ -29,7 +29,7 @@ class Page {
 public:
 	paddr physical_address() const { return phyaddr; }
 private:
-friend class Allocator;
+friend class MemPages;
 	paddr phyaddr;
 	Page *alloc_next;
 	Page *alloc_prev;
@@ -41,9 +41,9 @@ public:
 	int slab_obj_size;
 };
 
-class Allocator {
+class MemPages {
 public:
-	Allocator() : avail_size_(0), reserved_size_(0), tot_size_(0) {}
+	MemPages() : avail_size_(0), reserved_size_(0), tot_size_(0) {}
 
 	void Init(struct multiboot_tag_mmap *boot_mem_map);
 
@@ -76,7 +76,7 @@ private:
 	// TODO: for Alloc/Free()
 };
 
-extern Allocator *alloc;
+extern MemPages *mem_pages;
 
 }
 

@@ -10,7 +10,7 @@ extern long _bssEnd;
 
 namespace kernel {
 
-void Allocator::Init(struct multiboot_tag_mmap *mm)
+void MemPages::Init(struct multiboot_tag_mmap *mm)
 {
 #if 1
 	console->printf("Kernel Stack Top: 0x%lx Start: 0x%lx "
@@ -51,7 +51,7 @@ void Allocator::Init(struct multiboot_tag_mmap *mm)
 	CollectAvailable(mm->entries, nr_entries);
 }
 
-void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
+void MemPages::CollectAvailable(struct multiboot_mmap_entry *entries,
 				 int nr_entries)
 {
 	// we are on page [kstart_pg, kend_pg)
@@ -96,7 +96,7 @@ void Allocator::CollectAvailable(struct multiboot_mmap_entry *entries,
 }
 
 
-Page *Allocator::AllocPage()
+Page *MemPages::AllocPage()
 {
 	if(page_head.alloc_next == page_head.alloc_prev)
 		return NULL;
@@ -109,7 +109,7 @@ Page *Allocator::AllocPage()
 	return allocatored_page;
 }
 
-void Allocator::FreePage(Page *pg)
+void MemPages::FreePage(Page *pg)
 {
 	pg->alloc_next = page_head.alloc_next;
 	page_head.alloc_next->alloc_prev = pg;
@@ -119,7 +119,7 @@ void Allocator::FreePage(Page *pg)
 	pg->is_in_list = true;
 }
 
-Page *Allocator::AllocPages(int n)
+Page *MemPages::AllocPages(int n)
 {
 	if (n == 1) return AllocPage();
 
@@ -148,7 +148,7 @@ Page *Allocator::AllocPages(int n)
 	return &page_structs[start];
 }
 
-void Allocator::FreePages(Page *pg, int n)
+void MemPages::FreePages(Page *pg, int n)
 {
 	if (n == 1) {
 		FreePage(pg);
@@ -165,6 +165,6 @@ void Allocator::FreePages(Page *pg, int n)
 
 }
 
-Allocator *alloc = 0;
+MemPages *mem_pages = 0;
 
 }
