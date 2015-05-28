@@ -168,21 +168,28 @@ void InitSlab()
 
 static MemCacheBase *kGlobalMemCache[] = {
 	&chunk16_cache, &chunk32_cache, &chunk64_cache, &chunk128_cache,
-	&chunk256_cache, &chunk256_cache, &chunk512_cache, &chunk1024_cache,
-	&chunk2048_cache
+	&chunk256_cache, &chunk512_cache, &chunk1024_cache, &chunk2048_cache
 };
 
 MemCacheBase *FitGlobalMemCache(int obj_size)
 {
 	//obj_size Byte
-	int idx = 32 - __builtin_clz(obj_size - 1) - 3;
-	kassert(idx >= 0);
-	kassert(idx < 9);
+	int idx = 32 - __builtin_clz(obj_size - 1) - 4;
+	console->printf("idx = %d,  ", idx);
+	if (idx < 0 )
+		idx = 0;
+	kassert(idx < 8);
 	return kGlobalMemCache[idx];
 }
 
 void *kmalloc(int obj_size)
 {
+	if (obj_size > 2048) {
+		int nr_page = (obj_size - 1) / PAGESIZE + 1;
+		kernel::Page *pg = alloc->AllocPages(nr_page);
+		pg->slab_obj_size = nr_page * PAGESIZE;
+		return PADDR_TO_KPTR(pg->physical_address());
+	}
 	MemCacheBase *base = FitGlobalMemCache(obj_size);
 	return base->Allocate();
 }
@@ -191,6 +198,11 @@ void kfree(void *ptr)
 {
 	paddr addr = KPTR_TO_PADDR(ptr);
 	Page *pg = alloc->page(addr);
+	console->printf("page_size = %d\n", pg->slab_obj_size);
+	if (pg->slab_obj_size > 2048) {
+		alloc->FreePages(pg, pg->slab_obj_size / PAGESIZE);
+		return;
+	}
 	MemCacheBase *base = FitGlobalMemCache(pg->slab_obj_size);
 	base->Free(ptr);
 }
