@@ -179,7 +179,7 @@ void MetaSlab::Free(int obj_idx)
 
 MetaSlab *MetaSlab::AllocSlab(int obj_size)
 {
-	Page *pg = alloc->AllocPage();
+	Page *pg = mem_pages->AllocPage();
 	MetaSlab *slab = (MetaSlab *) PADDR_TO_KPTR(pg->physical_address());
 	pg->slab_ptr = slab;
 	pg->slab_obj_size = obj_size;
@@ -188,8 +188,8 @@ MetaSlab *MetaSlab::AllocSlab(int obj_size)
 
 void MetaSlab::FreeSlab(MetaSlab *slab)
 {
-	Page *pg = alloc->page(KPTR_TO_PADDR(slab));
-	alloc->FreePage(pg);
+	Page *pg = mem_pages->page(KPTR_TO_PADDR(slab));
+	mem_pages->FreePage(pg);
 }
 
 
@@ -242,7 +242,7 @@ public:
 	virtual void Free(void *ptr) {
 		// use the struct page to find its slab
 		paddr addr = KPTR_TO_PADDR(ptr);
-		Page *pg = alloc->page(addr);
+		Page *pg = mem_pages->page(addr);
 		Slab *slab = (Slab *) pg->slab_ptr;
 
 		slab->list_node()->Delete();
@@ -278,7 +278,7 @@ static MemCache<FreeListSlab, 2048> chunk2048_cache;
 BaseSlab *BaseSlab::AllocSlab(int obj_size)
 {
 	BaseSlab *slab = (BaseSlab *) meta_slab_cache.Allocate();
-	Page *pg = slab->data_page = alloc->AllocPage();
+	Page *pg = slab->data_page = mem_pages->AllocPage();
 	pg->slab_ptr = slab;
 	pg->slab_obj_size = obj_size;
 	return slab;
@@ -328,11 +328,11 @@ MemCacheBase *FitGlobalMemCache(int obj_size)
 	return kGlobalMemCache[idx];
 }
 
-void *kmalloc(int obj_size)
+void *Alloc(int obj_size)
 {
 	if (obj_size > 2048) {
 		int nr_page = (obj_size - 1) / PAGESIZE + 1;
-		kernel::Page *pg = alloc->AllocPages(nr_page);
+		kernel::Page *pg = mem_pages->AllocPages(nr_page);
 		pg->slab_obj_size = nr_page * PAGESIZE;
 		return PADDR_TO_KPTR(pg->physical_address());
 	}
@@ -340,13 +340,13 @@ void *kmalloc(int obj_size)
 	return base->Allocate();
 }
 
-void kfree(void *ptr)
+void Free(void *ptr)
 {
 	paddr addr = KPTR_TO_PADDR(ptr);
-	Page *pg = alloc->page(addr);
+	Page *pg = mem_pages->page(addr);
 	console->printf("page_size = %d\n", pg->slab_obj_size);
 	if (pg->slab_obj_size > 2048) {
-		alloc->FreePages(pg, pg->slab_obj_size / PAGESIZE);
+		mem_pages->FreePages(pg, pg->slab_obj_size / PAGESIZE);
 		return;
 	}
 	MemCacheBase *base = FitGlobalMemCache(pg->slab_obj_size);

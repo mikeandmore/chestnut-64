@@ -37,10 +37,6 @@ public:
 // buddy allocation
 MemCacheBase *FitGlobalMemCache(int obj_size);
 
-void *kmalloc(int obj_size);
-void kfree(void *ptr);
-
-
 void InitSlab();
 
 }

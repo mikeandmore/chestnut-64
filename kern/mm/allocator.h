@@ -78,6 +78,9 @@ private:
 
 extern MemPages *mem_pages;
 
+void *Alloc(int obj_size);
+void Free(void *ptr);
+
 }
 
 #endif /* ALLOCATOR_H */
