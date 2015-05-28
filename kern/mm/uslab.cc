@@ -166,4 +166,34 @@ void InitSlab()
 	new (&chunk2048_cache) MemCache<FreeListSlab, 2048>;
 }
 
+static MemCacheBase *kGlobalMemCache[] = {
+	&chunk16_cache, &chunk32_cache, &chunk64_cache, &chunk128_cache,
+	&chunk256_cache, &chunk256_cache, &chunk512_cache, &chunk1024_cache,
+	&chunk2048_cache
+};
+
+MemCacheBase *FitGlobalMemCache(int obj_size)
+{
+	//obj_size Byte
+	int idx = 32 - __builtin_clz(obj_size - 1) - 3;
+	kassert(idx >= 0);
+	kassert(idx < 9);
+	return kGlobalMemCache[idx];
+}
+
+void *kmalloc(int obj_size)
+{
+	MemCacheBase *base = FitGlobalMemCache(obj_size);
+	return base->Allocate();
+}
+
+void kfree(void *ptr)
+{
+	paddr addr = KPTR_TO_PADDR(ptr);
+	Page *pg = alloc->page(addr);
+	MemCacheBase *base = FitGlobalMemCache(pg->slab_obj_size);
+	base->Free(ptr);
+}
+
+
 }

@@ -23,4 +23,7 @@ __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
 
 	kernel::alloc->Init(boot_mem_map);
 	kernel::InitSlab();
+
+	void *ptr = kernel::kmalloc(15);
+	kernel::kfree(ptr);
 }
