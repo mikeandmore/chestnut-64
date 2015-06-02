@@ -5,6 +5,7 @@ build kern/boot.o: asm kern/boot.asm
 build kern/main.o: cxx kern/main.cc
 build kern/terminal.o: cxx kern/terminal.cc
 build kern/console.o: cxx kern/console.cc
+build kern/thread.o: cxx kern/thread.cc
 
 build kern/mm/allocator.o: cxx kern/mm/allocator.cc
 build kern/mm/uslab.o: cxx kern/mm/uslab.cc
@@ -22,6 +23,7 @@ build kernel.bin: ld kern/boot.o $
                      kern/console.o $
                      kern/mm/allocator.o $
                      kern/mm/uslab.o $
+                     kern/thread.o $
 
 build '-(' '-)': phony
 
