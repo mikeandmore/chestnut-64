@@ -66,4 +66,36 @@ void Thread::RestoreContext()
 	__builtin_unreachable();
 }
 
+Thread::Thread()
+{
+	// TODO: allocate stack page, initialize all variables
+}
+
+void Thread::Start()
+{
+	// TODO: add this thread to your scheduler, tell the scheduler to
+	// schedule this thread later.
+}
+
+void Thread::Stub()
+{
+	// if the scheduler want this thread to run, but find there is no
+	// context: meaning, the thread have just been added to the scheduler
+	// and it hasn't run at all.
+	//
+	// Then, the scheduler should call this function
+
+	void *stack_ptr = PADDR_TO_KPTR(context->stack->physical_address());
+	__asm__ (
+		"movq %0, %%rsp\n\t"
+		:
+		: "m" (stack_ptr)
+		: "%rsp"
+		);
+	Run();
+
+	// TODO: safely exit! Tell the scheduler to reclaim this thread when
+	// the context is no longer be used.
+}
+
 }

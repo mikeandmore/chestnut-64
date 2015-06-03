@@ -35,10 +35,18 @@ class Thread
 {
 public:
 	Thread();
-	virtual ~Thread();
-	u64 Create();
-     	void Yield();
-	void Destroy();
+
+	/**
+	 * Questions:
+	 *
+	 * 1. You can't kill another thread. Why?
+	 * 2. When the thread routine wants to exit the current thread, you
+	 * cannot destroy the current thread right there. Why?
+	 * 3. Therefore, with the two questions above, why there is a Stub()
+	 * method?
+	 */
+
+	void Yield();
 
 	/**
 	 * These two functions are the magic.
@@ -64,6 +72,14 @@ public:
 	bool  __no_inline SaveContext();
 	void RestoreContext() __no_return;
 
+	virtual void Run() {} // should be = 0 later...
+	void Start();
+
+	bool is_initialized() const { return is_initialized_; }
+
+private:
+	void Stub();
+
 protected:
 	u64 thread_id;
 	u64 priority;
@@ -73,6 +89,8 @@ protected:
 		u64 reg[kNumReg];
 		Page *stack;
 	} context;
+
+	bool is_initialized_;
 };
 
 }
