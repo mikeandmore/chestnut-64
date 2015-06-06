@@ -30,7 +30,7 @@ bool Thread::SaveContext()
 		"movq %%rcx, 112%0\n\t" // for RSP
 		: "=m" (context.reg)
 		:
-		: "memory", "%rcx"
+		: "memory", "%rcx", "%rbp"
 		);
 	return true;
 }
@@ -59,8 +59,8 @@ void Thread::RestoreContext()
 		"retq" // jump back
 		:
 		: "m" (context.reg)
-		: "%rax", "%rbx", "%rbp", "%r12", "%r13", "%r14", "%r15",
-		  "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9", "%rsp",
+		: /* "%rax", "%rbx", "%rbp", "%r12", "%r13", "%r14", "%r15",
+		     "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9", "%rsp", */
 		  "memory"
 		);
 	__builtin_unreachable();
@@ -85,7 +85,7 @@ void Thread::Stub()
 	//
 	// Then, the scheduler should call this function
 
-	void *stack_ptr = PADDR_TO_KPTR(context->stack->physical_address());
+	void *stack_ptr = PADDR_TO_KPTR(context.stack->physical_address());
 	__asm__ (
 		"movq %0, %%rsp\n\t"
 		:

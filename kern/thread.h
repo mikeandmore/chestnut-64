@@ -82,8 +82,6 @@ public:
 private:
 	void Stub();
 
-	void  __attribute((noinline)) SaveContext();
-
 protected:
 	u64 thread_id;
 	u64 priority;
