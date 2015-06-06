@@ -1,2 +1,3 @@
--I.
 -std=c++11
+-I.
+-Iacpica/include/

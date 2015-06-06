@@ -1,5 +1,8 @@
 include config.ninja
 
+# KERNEL ACPICA
+include acpica.ninja
+
 # KERNEL MAIN
 build kern/boot.o: asm kern/boot.asm
 build kern/main.o: cxx kern/main.cc
@@ -24,6 +27,7 @@ build kernel.bin: ld kern/boot.o $
                      kern/mm/allocator.o $
                      kern/mm/uslab.o $
                      kern/thread.o $
+                     kern/libacpica.a $
 
 build '-(' '-)': phony
 
