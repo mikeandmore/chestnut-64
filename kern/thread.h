@@ -69,6 +69,8 @@ public:
 	 * if (SaveContext()) SchedulerStopMe();
 	 *
 	 */
+
+	void Sleep(int second);
 	bool  __no_inline SaveContext();
 	void RestoreContext() __no_return;
 
@@ -89,6 +91,10 @@ protected:
 		u64 reg[kNumReg];
 		Page *stack;
 	} context;
+
+	enum {
+		Ready, Running, Blocked, Exited
+	} states;
 
 	bool is_initialized_;
 };
