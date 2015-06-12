@@ -39,11 +39,11 @@ public:
 	/**
 	 * Questions:
 	 *
-	 * 1. You can't kill another thread. Why?
+	 * 1. You can't kill another thread. Why? lock, memory consistency
 	 * 2. When the thread routine wants to exit the current thread, you
-	 * cannot destroy the current thread right there. Why?
+	 * cannot destroy the current thread right there. Why? using context and stack
 	 * 3. Therefore, with the two questions above, why there is a Stub()
-	 * method?
+	 * method? scheduler needs to know you want to exit
 	 */
 
 	void Yield();

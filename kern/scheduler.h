@@ -7,11 +7,13 @@
 #include "libc/list.h"
 
 namespace kernel {
-class Schedule
+
+class Scheduler
 {
 public:
-	Schedule();
-	virtual ~Schedule();
+	Scheduler();
+	virtual ~Scheduler();
+	void InitThreadQUeue();
 	//round robin
 	void AddThreadNode();
 	void DeleteThreadNode();
@@ -21,11 +23,13 @@ public:
 private:
 	struct ThreadNode {
 		ListNode list_node;
-		Thread *current;
+		Thread *thr;
 	};
 
-	ListNode head;
+	ListNode ready, waiting, exit;
 };
+
+extern Scheduler sched;
 
 }
 

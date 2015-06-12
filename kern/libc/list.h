@@ -11,6 +11,13 @@ struct ListNode {
 		// next = prev = 0;
 	}
 
+	void InsertBefore(ListNode *children) {
+		next = children;
+		prev = children->prev;
+
+		children->prev = this;
+		prev->next = this;
+	}
 	void InsertAfter(ListNode *parent) {
 		next = parent->next;
 		prev = parent;
