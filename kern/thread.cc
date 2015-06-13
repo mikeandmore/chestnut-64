@@ -1,4 +1,5 @@
 #include "thread.h"
+#include "scheduler.h"
 
 namespace kernel {
 
@@ -68,13 +69,18 @@ void Thread::RestoreContext()
 
 Thread::Thread()
 {
-	// TODO: allocate stack page, initialize all variables
+	context.stack = mem_pages->AllocPage();
+	is_initialized_ = false;
+}
+
+Thread::~Thread()
+{
+	mem_pages->FreePage(context.stack);
 }
 
 void Thread::Start()
 {
-	// TODO: add this thread to your scheduler, tell the scheduler to
-	// schedule this thread later.
+	sched.AddThread(this);
 }
 
 void Thread::Stub()
@@ -92,10 +98,10 @@ void Thread::Stub()
 		: "m" (stack_ptr)
 		: "%rsp"
 		);
+	is_initialized_ = true;
 	Run();
 
-	// TODO: safely exit! Tell the scheduler to reclaim this thread when
-	// the context is no longer be used.
+	sched.ExitCurrentThread();
 }
 
 }

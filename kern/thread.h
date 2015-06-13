@@ -7,6 +7,7 @@
 #include "libc/common.h"
 #include "mm/allocator.h"
 
+
 namespace kernel {
 
 enum RegisterIndex {
@@ -35,6 +36,7 @@ class Thread
 {
 public:
 	Thread();
+	~Thread();
 
 	/**
 	 * Questions:
@@ -80,6 +82,7 @@ public:
 	bool is_initialized() const { return is_initialized_; }
 
 private:
+friend class Scheduler;
 	void Stub();
 
 protected:
