@@ -27,8 +27,13 @@ public:
 
 private:
 
+<<<<<<< HEAD
 	ListNode ready, waiting, exit;
 	ThreadNode *cur_thread;
+=======
+	ThreadNode ready, waiting, exit;
+	ListNode ready_head, waiting_head, exit_head;
+>>>>>>> adding acpica
 };
 
 extern Scheduler sched;

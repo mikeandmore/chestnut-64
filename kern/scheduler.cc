@@ -5,9 +5,10 @@ Scheduler sched;
 
 void Scheduler::InitThreadQUeue()
 {
-	ready.InitHead();
-	waiting.InitHead();
-	exit.InitHead();
+	//change needed
+	ready.ready_head.InitHead();
+	waiting.waiting_head.InitHead();
+	exit.exit_head.InitHead();
 }
 
 void Scheduler::AddThread(Thread *thr)
