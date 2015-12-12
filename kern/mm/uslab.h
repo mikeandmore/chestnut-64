@@ -11,27 +11,27 @@ namespace kernel {
 
 class MemCacheBase {
 protected:
-	struct {
-		ListNode full, half, empty;
-	} slab_queue;
-	struct {
-		u64 allocated, slab_pg, max_pg;
-	} stat;
+  struct {
+    ListNode full, half, empty;
+  } slab_queue;
+  struct {
+    u64 allocated, slab_pg, max_pg;
+  } stat;
 public:
-	MemCacheBase();
+  MemCacheBase();
 
-	virtual void *Allocate() = 0;
-	virtual void Free(void *ptr) = 0;
+  virtual void *Allocate() = 0;
+  virtual void Free(void *ptr) = 0;
 
-	virtual MemCacheBase *CreateNew() = 0;
+  virtual MemCacheBase *CreateNew() = 0;
 
-	void set_max_page(u64 max_page) { stat.max_pg = max_page; }
-	u64 max_page() { return stat.max_pg; }
+  void set_max_page(u64 max_page) { stat.max_pg = max_page; }
+  u64 max_page() { return stat.max_pg; }
 
-	void PrintStat() {
-		console->printf("allocated: %ld pg %ld max_pag %ld\n",
-				stat.allocated, stat.slab_pg, stat.max_pg);
-	}
+  void PrintStat() {
+    console->printf("allocated: %ld pg %ld max_pag %ld\n",
+                    stat.allocated, stat.slab_pg, stat.max_pg);
+  }
 };
 
 // buddy allocation
