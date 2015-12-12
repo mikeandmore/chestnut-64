@@ -37,18 +37,18 @@ typedef unsigned long ulong;
 
 #define halt() asm("hlt")
 
-#define panic(fmt, ...)							\
-	do {								\
-		kernel::console->printf("PANIC: " fmt, ##__VA_ARGS__);	\
-		asm("cli");						\
-		halt();							\
-	} while (0)							\
+#define panic(fmt, ...)                                         \
+  do {								\
+    kernel::console->printf("PANIC: " fmt, ##__VA_ARGS__);	\
+    asm("cli");                                                 \
+    halt();							\
+  } while (0)							\
 
-#define kassert(expr)						\
-	do {							\
-		if (!(expr))					\
-			panic("Assertion Error on " #expr);	\
-	} while (0)						\
+#define kassert(expr)                           \
+  do {                                          \
+    if (!(expr))                                \
+      panic("Assertion Error on " #expr);	\
+  } while (0)                                   \
 
 #ifdef __cplusplus
 

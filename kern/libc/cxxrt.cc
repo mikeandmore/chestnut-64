@@ -3,5 +3,5 @@
 
 __link void __cxa_pure_virtual()
 {
-	panic("Runtime Error: pure C++ virtual function called!");
+  panic("Runtime Error: pure C++ virtual function called!");
 }
