@@ -5,14 +5,12 @@
 
 namespace kernel {
 
-static char copykVGABuffer[Terminal::kVGAHeight][Terminal::kVGAWidth];
-
 Console::Console()
   : x(0), y(0)
 {
   for (int i = 0; i < Terminal::kVGAHeight; i++) {
     for (int j = 0; j < Terminal::kVGAWidth; j++) {
-      copykVGABuffer[i][j] = 0;
+      vga_buffer[i][j] = 0;
     }
   }
 }
@@ -27,16 +25,16 @@ void Console::putchar(char ch)
     //copy the screen and move up one line...
     for(int i = 0; i < Terminal::kVGAHeight - 1; i++ ) {
       for (int j = 0; j < Terminal::kVGAWidth; j++) {
-        copykVGABuffer[i][j] = copykVGABuffer[i + 1][j];
+        vga_buffer[i][j] = vga_buffer[i + 1][j];
       }
     }
     for (int j = 0; j < Terminal::kVGAWidth; j++) {
-      copykVGABuffer[Terminal::kVGAHeight - 1][j] = 0;
+      vga_buffer[Terminal::kVGAHeight - 1][j] = 0;
     }
 
     for (int i = 0; i < Terminal::kVGAHeight; i++) {
       for (int j = 0; j < Terminal::kVGAWidth; j++) {
-        GlobalInstance<Terminal>().DrawChar(copykVGABuffer[i][j], j, i);
+        GlobalInstance<Terminal>().DrawChar(vga_buffer[i][j], j, i);
       }
     }
     //end of move the screen one line up
@@ -48,7 +46,7 @@ void Console::putchar(char ch)
     return;
   }
   GlobalInstance<Terminal>().DrawChar(ch, x, y);
-  copykVGABuffer[y][x] = ch;
+  vga_buffer[y][x] = ch;
   x += 1;
 }
 

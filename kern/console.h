@@ -15,6 +15,7 @@ public:
 private:
   int x;
   int y;
+  char vga_buffer[Terminal::kVGAHeight][Terminal::kVGAWidth];
 };
 
 }
