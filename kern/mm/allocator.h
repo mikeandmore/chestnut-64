@@ -36,7 +36,7 @@ friend class MemPages;
   bool is_free;
   bool is_in_list;
 public:
-  BaseSlab *slab_ptr;
+  void *slab_ptr;
   int slab_obj_size;
 };
 
@@ -71,8 +71,6 @@ private:
   Page *page_structs; // array of pages
   int64 nr_page_structs;
 };
-
-extern MemPages *mem_pages;
 
 void *Alloc(int obj_size);
 void Free(void *ptr);

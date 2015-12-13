@@ -12,14 +12,15 @@ namespace kernel {
 
 void MemPages::Init(struct multiboot_tag_mmap *mm)
 {
+  auto console = GlobalInstance<Console>();
 #if 1
-  console->printf("Kernel Stack Top: 0x%lx Start: 0x%lx "
-                  "End: 0x%lx BSSEnd: 0x%lx\n",
-                  &Stack, &_loadStart, &_loadEnd, &_bssEnd);
+  console.printf("Kernel Stack Top: 0x%lx Start: 0x%lx "
+                 "End: 0x%lx BSSEnd: 0x%lx\n",
+                 &Stack, &_loadStart, &_loadEnd, &_bssEnd);
 #endif
 
   int nr_entries = (mm->size - sizeof(multiboot_tag_mmap)) / mm->entry_size;
-  console->printf("Physical Memory Map:\n");
+  console.printf("Physical Memory Map:\n");
   for (int i = 0; i < nr_entries; i++) {
     struct multiboot_mmap_entry *entry = &mm->entries[i];
     if (entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
@@ -35,18 +36,18 @@ void MemPages::Init(struct multiboot_tag_mmap *mm)
     }
     tot_size_ += entry->len;
 
-    console->printf("Addr: %lx Len: %lx Type: %d\n",
-                    entry->addr, entry->len, entry->type);
+    console.printf("Addr: %lx Len: %lx Type: %d\n",
+                   entry->addr, entry->len, entry->type);
   }
 
-  console->printf("Total Memory: %ld KB\n"
-                  "  Available: %ld KB\n"
-                  "  Reserved: %ld KB\n"
-                  "  ACPI: %ld KB\n",
-                  total() / 1024,
-                  available() / 1024,
-                  reserved() / 1024,
-                  acpi_mem() / 1024);
+  console.printf("Total Memory: %ld KB\n"
+                 "  Available: %ld KB\n"
+                 "  Reserved: %ld KB\n"
+                 "  ACPI: %ld KB\n",
+                 total() / 1024,
+                 available() / 1024,
+                 reserved() / 1024,
+                 acpi_mem() / 1024);
 
   CollectAvailable(mm->entries, nr_entries);
 }
@@ -165,6 +166,12 @@ void MemPages::FreePages(Page *pg, int n)
 
 }
 
-MemPages *mem_pages = 0;
+}
 
+static kernel::MemPages mem_pages;
+
+template <>
+kernel::MemPages &GlobalInstance()
+{
+  return mem_pages;
 }

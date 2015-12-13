@@ -11,29 +11,24 @@ namespace kernel {
 
 class Scheduler
 {
-	struct ThreadNode {
-		ListNode list_node;
-		Thread *thr;
-	};
+  struct ThreadNode {
+    ListNode list_node;
+    Thread *thr;
+  };
 public:
-	Scheduler();
-	virtual ~Scheduler();
-	void InitThreadQUeue();
-	//round robin
-	void AddThread(Thread *thr);
-	void ExitCurrentThread();
-	ThreadNode *RoundRobin();
-	void SwitchToNext();
+  Scheduler();
+  virtual ~Scheduler();
+  void InitThreadQUeue();
+  //round robin
+  void AddThread(Thread *thr);
+  void ExitCurrentThread();
+  ThreadNode *RoundRobin();
+  void SwitchToNext();
 
 private:
 
-<<<<<<< HEAD
-	ListNode ready, waiting, exit;
-	ThreadNode *cur_thread;
-=======
-	ThreadNode ready, waiting, exit;
-	ListNode ready_head, waiting_head, exit_head;
->>>>>>> adding acpica
+  ListNode ready, waiting, exit;
+  ThreadNode *cur_thread;
 };
 
 extern Scheduler sched;

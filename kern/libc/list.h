@@ -3,9 +3,9 @@
 #define LIST_H
 
 // intrusive double linked list
-class ListNode {
+struct ListNode {
   ListNode *prev, *next;
-public:
+
   void Delete() {
     prev->next = next;
     next->prev = prev;

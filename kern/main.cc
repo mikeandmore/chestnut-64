@@ -8,44 +8,9 @@
 
 __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
 {
-  kernel::Terminal term;
-  kernel::default_term = &term; // this stack will never destroy
-  // kernel::default_term->Reset();
-  // kernel::default_term->DrawString("Chestnut-64 OS booting...");
-  kernel::Console console;
-  kernel::console = &console;
-  // console.putchar('a');
-  // for (int i = 0; i < 100; i++)
-  kernel::MemPages mem_pages;
-  kernel::mem_pages = &mem_pages;
+  InitializeGlobal<kernel::Terminal, kernel::Console, kernel::MemPages>();
 
-  console.printf("Chestnut-64 Booting...\n");
-
-  kernel::mem_pages->Init(boot_mem_map);
+  GlobalInstance<kernel::Console>().printf("Chestnut-64 Booting...\n");
+  GlobalInstance<kernel::MemPages>().Init(boot_mem_map);
   kernel::InitSlab();
-  // 15, 63, 64, 127, 255, 511, 1023, 2047, 4095
-  void *ptr = kernel::Alloc(15);
-  kernel::Free(ptr);
-
-  ptr = kernel::Alloc(63);
-  kernel::Free(ptr);
-  ptr = kernel::Alloc(64);
-  kernel::Free(ptr);
-  ptr = kernel::Alloc(127);
-  kernel::Free(ptr);
-
-  ptr = kernel::Alloc(255);
-  kernel::Free(ptr);
-
-  ptr = kernel::Alloc(511);
-  kernel::Free(ptr);
-
-  ptr = kernel::Alloc(1023);
-  kernel::Free(ptr);
-
-  ptr = kernel::Alloc(2047);
-  kernel::Free(ptr);
-
-  ptr = kernel::Alloc(4095);
-  kernel::Free(ptr);
 }

@@ -17,8 +17,6 @@ private:
   int y;
 };
 
-extern Console *console;
-
 }
 
 #endif /* CONSOLE_H */

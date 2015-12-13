@@ -26,7 +26,6 @@ build kernel.bin: ld kern/boot.o $
                      kern/console.o $
                      kern/mm/allocator.o $
                      kern/mm/uslab.o $
-                     kern/thread.o $
                      kern/libacpica.a $
 
 build '-(' '-)': phony

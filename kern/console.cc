@@ -1,4 +1,5 @@
 #include "console.h"
+#include "libc/common.h"
 #include "libc/stdarg.h"
 #include "libc/string.h"
 
@@ -35,7 +36,7 @@ void Console::putchar(char ch)
 
     for (int i = 0; i < Terminal::kVGAHeight; i++) {
       for (int j = 0; j < Terminal::kVGAWidth; j++) {
-        default_term->DrawChar(copykVGABuffer[i][j], j, i);
+        GlobalInstance<Terminal>().DrawChar(copykVGABuffer[i][j], j, i);
       }
     }
     //end of move the screen one line up
@@ -46,7 +47,7 @@ void Console::putchar(char ch)
     y++;
     return;
   }
-  default_term->DrawChar(ch, x, y);
+  GlobalInstance<Terminal>().DrawChar(ch, x, y);
   copykVGABuffer[y][x] = ch;
   x += 1;
 }
@@ -111,6 +112,12 @@ void Console::printf(const char *fmt, ...)
   va_end(ap);
 }
 
-Console *console = 0;
+}
 
+static kernel::Console def_console;
+
+template <>
+kernel::Console &GlobalInstance()
+{
+  return def_console;
 }

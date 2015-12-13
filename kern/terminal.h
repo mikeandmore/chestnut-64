@@ -57,8 +57,6 @@ private:
   Color bg_, fg_;
 };
 
-extern Terminal *default_term;
-
 }
 
 #endif /* TERMINAL_H */

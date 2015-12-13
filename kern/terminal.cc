@@ -52,6 +52,13 @@ void Terminal::DrawString(const char *str)
   DrawString(str, x, y);
 }
 
-Terminal *default_term = NULL;
+}
 
+// export global term
+static kernel::Terminal term;
+
+template <>
+kernel::Terminal &GlobalInstance()
+{
+  return term;
 }

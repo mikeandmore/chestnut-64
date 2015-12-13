@@ -37,12 +37,12 @@ typedef unsigned long ulong;
 
 #define halt() asm("hlt")
 
-#define panic(fmt, ...)                                         \
-  do {								\
-    kernel::console->printf("PANIC: " fmt, ##__VA_ARGS__);	\
-    asm("cli");                                                 \
-    halt();							\
-  } while (0)							\
+#define panic(fmt, ...)                                                 \
+  do {                                                                  \
+    GlobalInstance<kernel::Console>().printf("PANIC: " fmt, ##__VA_ARGS__); \
+    asm("cli");                                                         \
+    halt();                                                             \
+  } while (0)                                                           \
 
 #define kassert(expr)                           \
   do {                                          \
@@ -57,6 +57,25 @@ inline void *operator new(ulong, void *p)     throw() { return p; }
 inline void *operator new[](ulong, void *p)   throw() { return p; }
 inline void  operator delete  (void *, void *) throw() { };
 inline void  operator delete[](void *, void *) throw() { };
+
+// getting global variable
+// each module use specialization to export global variable
+template <typename T>
+T& GlobalInstance();
+
+template <typename T>
+void InitializeGlobal()
+{
+  T& ins = GlobalInstance<T>();
+  new(&ins) T();
+}
+
+template <typename T1, typename T2, typename ...Targs>
+void InitializeGlobal()
+{
+  InitializeGlobal<T1>();
+  InitializeGlobal<T2, Targs...>();
+}
 
 #endif
 
