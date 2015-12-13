@@ -2,6 +2,7 @@
 #ifndef LIST_H
 #define LIST_H
 
+// intrusive double linked list
 class ListNode {
   ListNode *prev, *next;
 public:

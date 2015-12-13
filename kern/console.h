@@ -8,13 +8,13 @@ namespace kernel {
 class Console
 {
 public:
-	Console();
+  Console();
 
-	void putchar(char ch);
-	void printf(const char *fmt, ...);
+  void putchar(char ch);
+  void printf(const char *fmt, ...);
 private:
-	int x;
-	int y;
+  int x;
+  int y;
 };
 
 extern Console *console;
