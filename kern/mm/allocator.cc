@@ -21,6 +21,7 @@ void MemPages::Init(struct multiboot_tag_mmap *mm)
 
   int nr_entries = (mm->size - sizeof(multiboot_tag_mmap)) / mm->entry_size;
   console.printf("Physical Memory Map:\n");
+  u64 max_kern_mem;
   for (int i = 0; i < nr_entries; i++) {
     struct multiboot_mmap_entry *entry = &mm->entries[i];
     if (entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
@@ -28,6 +29,8 @@ void MemPages::Init(struct multiboot_tag_mmap *mm)
         avail_low_ = entry->len;
       } else {
         avail_size_ += entry->len;
+        u64 kern_mem = entry->addr + entry->len;
+        max_kern_mem = max_kern_mem > kern_mem ? max_kern_mem : kern_mem;
       }
     } else if (entry->type == MULTIBOOT_MEMORY_RESERVED) {
       reserved_size_ += entry->len;
@@ -35,6 +38,7 @@ void MemPages::Init(struct multiboot_tag_mmap *mm)
       acpi_size_ += entry->len;
     }
     tot_size_ += entry->len;
+    nr_page_structs = max_kern_mem / PAGESIZE;
 
     console.printf("Addr: %lx Len: %lx Type: %d\n",
                    entry->addr, entry->len, entry->type);
@@ -59,11 +63,9 @@ void MemPages::CollectAvailable(struct multiboot_mmap_entry *entries,
   u64 kstart_pg = PG((u64) &_loadStart);
   u64 kend_pg = PGALIGN((u64) &_bssEnd) + kBootLoaderSkipPages * PAGESIZE;
 
-  u64 nr_pages = PGALIGN(total()) / PAGESIZE;
-  u64 struct_tot_sz = sizeof(Page) * nr_pages;
-  u64 nr_pages_struct = PGALIGN(struct_tot_sz) / PAGESIZE;
+  u64 struct_tot_sz = sizeof(Page) * nr_page_structs;
   // we store them right after the kernel, which is starting from
-  // [kend_pg, kend_pg + nr_pages_struct * PAGESIZE)
+  // [kend_pg, kend_pg + nr_pages_structs * PAGESIZE)
   page_structs = (Page *) PADDR_TO_KPTR(kend_pg);
   memset(page_structs, 0, struct_tot_sz);
 
@@ -74,7 +76,7 @@ void MemPages::CollectAvailable(struct multiboot_mmap_entry *entries,
       continue;
     for (u64 paddr = ent->addr; paddr < ent->addr + ent->len;
          paddr += PAGESIZE) {
-      kassert(PGNUM(paddr) < nr_pages);
+      kassert(PGNUM(paddr) < nr_page_structs);
       Page *pg = &page_structs[PGNUM(paddr)];
       pg->phyaddr = PG(paddr);
 
@@ -93,7 +95,6 @@ void MemPages::CollectAvailable(struct multiboot_mmap_entry *entries,
       }
     }
   }
-  nr_page_structs = nr_pages;
 }
 
 

@@ -69,7 +69,7 @@ private:
 
   Page page_head; // free list (double linked_list)
   Page *page_structs; // array of pages
-  int64 nr_page_structs;
+  u64 nr_page_structs;
 };
 
 void *Alloc(int obj_size);
