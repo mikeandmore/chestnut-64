@@ -241,6 +241,7 @@ void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
 void AcpiX64::StartCPUs()
 {
   u8 startup_vec = 0x08;
+  CpuPlatform::SetupSMPBootCode();
 
   u32 bsp_apic_id = local_apic_->Id();
   u16 cpus_started = 0;
@@ -259,7 +260,7 @@ void AcpiX64::StartCPUs()
     ++cpus_started;
 
     kprintf("Starting #%d...\n", cpus_started);
-    while (trampoline.cpus_counter_value() != cpus_started) {
+    while (CpuPlatform::ReceiveCpuCounter() != cpus_started) {
       CpuPlatform::WaitPause();
     }
   }

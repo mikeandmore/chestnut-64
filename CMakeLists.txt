@@ -28,7 +28,11 @@ add_executable(kernel.bin
         kern/libc/vector.cc
         kern/libc/cxxrt.cc
 
-        kern/x64/cpu-x64.cc)
+        kern/x64/cpu-x64.cc
+        kern/x64/acpi-x64.cc
+        kern/x64/hpet-x64.cc
+        kern/x64/ioapic-x64.cc
+        kern/x64/local-apic-x64.cc)
 
 target_link_libraries(kernel.bin acpica)
 

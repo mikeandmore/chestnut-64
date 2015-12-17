@@ -19,12 +19,12 @@
 
 namespace kernel {
 
-enum IoApicAccessorRegister {
+enum class IoApicAccessorRegister {
   IOREGSEL    = 0x00,  // Register selector
   IOWIN       = 0x10   // Register data
 };
 
-enum IoApicRegister {
+enum class IoApicRegister {
   ID          = 0x00,  // IO APIC ID
   VER         = 0x01,  // IO APIC Version / Max Redirection Entry
   ARB         = 0x02,  // APIC Arbitration ID

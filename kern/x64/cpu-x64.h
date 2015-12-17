@@ -91,6 +91,11 @@ public:
   inline static void Halt() {
     asm volatile("hlt");
   }
+
+  static const uintptr_t kLoadAddress = 0x8000;
+
+  static void SetupSMPBootCode();
+  static u16 ReceiveCpuCounter();
 };
 
 }

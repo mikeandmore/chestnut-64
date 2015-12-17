@@ -22,7 +22,7 @@ class PlatformArch;
 /**
  * List of available local apic registers
  */
-enum LocalApicRegister {
+enum class LocalApicRegister {
   ID                              = 0x0020,  // Local APIC ID
   VERSION                         = 0x0030,  // Local APIC Version
   TASK_PRIORITY                   = 0x0080,  // Task Priority
@@ -56,7 +56,7 @@ enum LocalApicRegister {
 class LocalApicInterruptCommand {
 friend class LocalApicRegisterAccessor;
 public:
-  enum DeliveryMode {
+  enum class DeliveryMode {
     FIXED = 0,
     LOWEST_PRIORITY = 1,
     SMI = 2,
@@ -65,17 +65,17 @@ public:
     STARTUP = 6
   };
 
-  enum DestinationMode {
+  enum class DestinationMode {
     PHYSICAL = 0,
     LOGICAL = 1
   };
 
-  enum DeliveryStatus {
+  enum class DeliveryStatus {
     IDLE = 0,
     PENDING = 1
   };
 
-  enum DestinationShorthand {
+  enum class DestinationShorthand {
     NONE = 0,
     SELF = 1,
     ALL = 2,

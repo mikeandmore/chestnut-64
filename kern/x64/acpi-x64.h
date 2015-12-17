@@ -17,7 +17,7 @@
 
 #include "libc/common.h"
 #include "libc/vector.h"
-#include "x64/cpu-trampoline-x64.h"
+#include "x64/cpu-x64.h"
 #include "x64/ioapic-x64.h"
 #include "x64/hpet-x64.h"
 
@@ -43,11 +43,10 @@ public:
     kassert(local_apic_);
 
     if (nullptr == hpet_) {
-      printf("Unable to find HPET device.");
-      abort();
+      panic("Unable to find HPET device.");
     }
 
-    RT_ASSERT(hpet_);
+    kassert(hpet_);
   }
 
   AcpiX64(const AcpiX64 &rhs) = delete;
@@ -75,6 +74,6 @@ private:
   void ParseTableHPET(AcpiHeaderHPET* header);
 };
 
-} // namespace rt
+}
 
 #endif /* ACPI_X64_H */
