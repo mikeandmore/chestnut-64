@@ -12,76 +12,75 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#ifndef IOAPIC_X64_H
+#define IOAPIC_X64_H
 
-#include <kernel/kernel.h>
-#include <stdio.h>
+#include "libc/common.h"
 
-namespace rt {
+namespace kernel {
 
-enum class IoApicAccessorRegister {
-    IOREGSEL    = 0x00,  // Register selector
-    IOWIN       = 0x10   // Register data
+enum IoApicAccessorRegister {
+  IOREGSEL    = 0x00,  // Register selector
+  IOWIN       = 0x10   // Register data
 };
 
-enum class IoApicRegister {
-    ID          = 0x00,  // IO APIC ID
-    VER         = 0x01,  // IO APIC Version / Max Redirection Entry
-    ARB         = 0x02,  // APIC Arbitration ID
-    REDTBL      = 0x10   // Redirection Entries
+enum IoApicRegister {
+  ID          = 0x00,  // IO APIC ID
+  VER         = 0x01,  // IO APIC Version / Max Redirection Entry
+  ARB         = 0x02,  // APIC Arbitration ID
+  REDTBL      = 0x10   // Redirection Entries
 };
 
 class IoApicRegistersAccessor {
 public:
-    explicit IoApicRegistersAccessor(uintptr_t address)
-        :	address_(address) {
-        RT_ASSERT(address);
-    }
+  explicit IoApicRegistersAccessor(uintptr_t address)
+    :	addr(address) {
+    kassert(addr);
+  }
 
-    inline uint32_t Read(IoApicRegister reg) const {
-        RT_ASSERT(address_);
-        *(volatile uint32_t*)(address_ +
-            static_cast<uint8_t>(IoApicAccessorRegister::IOREGSEL))
-                = static_cast<uint32_t>(reg);
+  inline u32 Read(IoApicRegister reg) const {
+    kassert(addr);
+    *(volatile u32*)(addr + static_cast<u8>(IoApicAccessorRegister::IOREGSEL))
+      = static_cast<u32>(reg);
 
-        return *(volatile uint32_t*)(address_ +
-            static_cast<uint8_t>(IoApicAccessorRegister::IOWIN));
-    }
+    return *(volatile u32*)(addr + static_cast<u8>(IoApicAccessorRegister::IOWIN));
+  }
 
-    inline void Write(IoApicRegister reg, uint8_t reg_offset, uint32_t value) const {
-        RT_ASSERT(address_);
-        *(volatile uint32_t*)(address_ +
-            static_cast<uint8_t>(IoApicAccessorRegister::IOREGSEL))
-                = static_cast<uint32_t>(reg) + reg_offset;
+  inline void Write(IoApicRegister reg, u8 reg_offset, u8 value) const {
+    kassert(addr);
+    *(volatile u32*)(addr + static_cast<u8>(IoApicAccessorRegister::IOREGSEL))
+      = static_cast<u32>(reg) + reg_offset;
 
-        *(volatile uint32_t*)(address_ +
-            static_cast<uint8_t>(IoApicAccessorRegister::IOWIN)) = value;
-    }
+    *(volatile u32*)(addr + static_cast<u8>(IoApicAccessorRegister::IOWIN)) = value;
+  }
 
-    inline void SetEntry(uint8_t index, uint64_t data) const {
-        Write(IoApicRegister::REDTBL, index * 2, static_cast<uint32_t>(data));
-        Write(IoApicRegister::REDTBL, index * 2 + 1, static_cast<uint32_t>(data >> 32));
-    }
+  inline void SetEntry(u8 index, u64 data) const {
+    Write(IoApicRegister::REDTBL, index * 2, static_cast<u32>(data));
+    Write(IoApicRegister::REDTBL, index * 2 + 1, static_cast<u32>(data >> 32));
+  }
 private:
-    uintptr_t address_;
+  uintptr_t addr;
 };
 
 class IoApicX64 {
 public:
-    IoApicX64(uint32_t id, uintptr_t address, uint32_t interrupt_base);
+  IoApicX64(u32 id, uintptr_t address, u32 intr_base);
 
-    void Init();
+  void Init();
 
-    void EnableIrq(uint32_t first_irq_offset, uint32_t irq) {
-        registers_.SetEntry(irq, first_irq_offset + irq + interrupt_base_);
-    }
+  void EnableIrq(u32 first_irq_offset, u32 irq) {
+    kprintf("Enabling IRQ %d %d\n", first_irq_offset, irq);
+    registers.SetEntry(irq, first_irq_offset + irq + interrupt_base);
+  }
 
 private:
-    uint32_t id_;
-    uintptr_t address_;
-    uint32_t interrupt_base_;
-    IoApicRegistersAccessor registers_;
-    DELETE_COPY_AND_ASSIGN(IoApicX64);
+  u32 id_;
+  uintptr_t addr;
+  u32 interrupt_base;
+  IoApicRegistersAccessor registers;
 };
 
-} // namespace rt
+}
+
+
+#endif /* IOAPIC_X64_H */

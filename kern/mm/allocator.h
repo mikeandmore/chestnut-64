@@ -43,6 +43,7 @@ public:
 class MemPages {
 public:
   MemPages() : avail_size_(0), reserved_size_(0), tot_size_(0) {}
+  MemPages(const MemPages &rhs) = delete;
 
   void Init(struct multiboot_tag_mmap *boot_mem_map);
 

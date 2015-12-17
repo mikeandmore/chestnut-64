@@ -26,7 +26,9 @@ add_executable(kernel.bin
         kern/mm/uslab.cc
         kern/libc/string.c
         kern/libc/vector.cc
-        kern/libc/cxxrt.cc)
+        kern/libc/cxxrt.cc
+
+        kern/x64/cpu-x64.cc)
 
 target_link_libraries(kernel.bin acpica)
 

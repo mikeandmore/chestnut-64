@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cpu-x64.h"
-#include <kernel/x64/io-x64.h>
+#include "x64/cpu-x64.h"
+#include "x64/io-x64.h"
 
-namespace rt {
+// export global vars
+static kernel::SerialPortX64 def_serial_port;
 
-int SerialPortX64::port_;
-
-} // namespace rt
+template <>
+kernel::SerialPortX64 &GlobalInstance()
+{
+  return def_serial_port;
+}

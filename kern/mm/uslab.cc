@@ -174,7 +174,7 @@ void MetaSlab::Free(int obj_idx)
 
 MetaSlab *MetaSlab::AllocSlab(int obj_size)
 {
-  auto mem_pages = GlobalInstance<MemPages>();
+  auto &mem_pages = GlobalInstance<MemPages>();
   Page *pg = mem_pages.AllocPage();
   MetaSlab *slab = (MetaSlab *) PADDR_TO_KPTR(pg->physical_address());
   pg->slab_ptr = slab;
@@ -184,7 +184,7 @@ MetaSlab *MetaSlab::AllocSlab(int obj_size)
 
 void MetaSlab::FreeSlab(MetaSlab *slab)
 {
-  auto mem_pages = GlobalInstance<MemPages>();
+  auto &mem_pages = GlobalInstance<MemPages>();
   Page *pg = mem_pages.page(KPTR_TO_PADDR(slab));
   mem_pages.FreePage(pg);
 }
@@ -213,6 +213,7 @@ public:
 
   virtual void *Allocate() {
     Slab *slab = NULL;
+
     if (slab_queue.half.is_empty()) {
       if (slab_queue.empty.is_empty()) {
         slab = (Slab *) Slab::AllocSlab(ObjSize);
@@ -227,16 +228,18 @@ public:
       slab = (Slab *) slab_queue.half.next;
       slab->list_node()->Delete();
     }
+
     int idx = slab->Alloc();
     u8* mem = slab->mem();
     stat.allocated++;
     AdjustSlab(slab);
 
+    // kprintf("slab %x mem %x idx %d\n", slab, mem, idx);
     return mem + idx * ObjSize;
   }
 
   virtual void Free(void *ptr) {
-    auto mem_pages = GlobalInstance<MemPages>();
+    auto &mem_pages = GlobalInstance<MemPages>();
     // use the struct page to find its slab
     paddr addr = KPTR_TO_PADDR(ptr);
     Page *pg = mem_pages.page(addr);
@@ -274,7 +277,7 @@ static MemCache<FreeListSlab, 2048> chunk2048_cache;
 
 BaseSlab *BaseSlab::AllocSlab(int obj_size)
 {
-  auto mem_pages = GlobalInstance<MemPages>();
+  auto &mem_pages = GlobalInstance<MemPages>();
   BaseSlab *slab = (BaseSlab *) meta_slab_cache.Allocate();
   Page *pg = slab->data_page = mem_pages.AllocPage();
   pg->slab_ptr = slab;
@@ -308,6 +311,7 @@ void InitSlab()
   new (&chunk512_cache) MemCache<FreeListSlab, 512>;
   new (&chunk1024_cache) MemCache<FreeListSlab, 1024>;
   new (&chunk2048_cache) MemCache<FreeListSlab, 2048>;
+  kprintf("Memory Allocator Initialized\n");
 }
 
 static MemCacheBase *kGlobalMemCache[] = {
@@ -319,7 +323,7 @@ MemCacheBase *FitGlobalMemCache(int obj_size)
 {
   //obj_size Byte
   int idx = 32 - __builtin_clz(obj_size - 1) - 4;
-  GlobalInstance<Console>().printf("idx = %d,  ", idx);
+  // GlobalInstance<Console>().printf("idx = %d,  ", idx);
   if (idx < 0 )
     idx = 0;
   kassert(idx < 8);
@@ -335,15 +339,17 @@ void *Alloc(int obj_size)
     return PADDR_TO_KPTR(pg->physical_address());
   }
   MemCacheBase *base = FitGlobalMemCache(obj_size);
+  // kprintf("base %x\n", base);
   return base->Allocate();
 }
 
 void Free(void *ptr)
 {
-  auto mem_page = GlobalInstance<MemPages>();
+  if (ptr == nullptr) return;
+  auto &mem_page = GlobalInstance<MemPages>();
   paddr addr = KPTR_TO_PADDR(ptr);
   Page *pg = mem_page.page(addr);
-  GlobalInstance<Console>().printf("page_size = %d\n", pg->slab_obj_size);
+  // GlobalInstance<Console>().printf("page_size = %d\n", pg->slab_obj_size);
   if (pg->slab_obj_size > 2048) {
     mem_page.FreePages(pg, pg->slab_obj_size / PAGESIZE);
     return;

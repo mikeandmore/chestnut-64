@@ -12,16 +12,14 @@ namespace kernel {
 
 void MemPages::Init(struct multiboot_tag_mmap *mm)
 {
-  auto console = GlobalInstance<Console>();
 #if 1
-  console.printf("Kernel Stack Top: 0x%lx Start: 0x%lx "
-                 "End: 0x%lx BSSEnd: 0x%lx\n",
-                 &Stack, &_loadStart, &_loadEnd, &_bssEnd);
+  kprintf("Kernel Stack Top: 0x%lx Start: 0x%lx End: 0x%lx BSSEnd: 0x%lx\n",
+          &Stack, &_loadStart, &_loadEnd, &_bssEnd);
 #endif
 
   int nr_entries = (mm->size - sizeof(multiboot_tag_mmap)) / mm->entry_size;
-  console.printf("Physical Memory Map:\n");
-  u64 max_kern_mem;
+  kprintf("Physical Memory Map:\n");
+  u64 max_kern_mem = 0;
   for (int i = 0; i < nr_entries; i++) {
     struct multiboot_mmap_entry *entry = &mm->entries[i];
     if (entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
@@ -40,18 +38,19 @@ void MemPages::Init(struct multiboot_tag_mmap *mm)
     tot_size_ += entry->len;
     nr_page_structs = max_kern_mem / PAGESIZE;
 
-    console.printf("Addr: %lx Len: %lx Type: %d\n",
+    kprintf("Addr: %lx Len: %lx Type: %d\n",
                    entry->addr, entry->len, entry->type);
   }
+  kprintf("Max Kern Mem: %ld KB\n", max_kern_mem / 1024);
 
-  console.printf("Total Memory: %ld KB\n"
-                 "  Available: %ld KB\n"
-                 "  Reserved: %ld KB\n"
-                 "  ACPI: %ld KB\n",
-                 total() / 1024,
-                 available() / 1024,
-                 reserved() / 1024,
-                 acpi_mem() / 1024);
+  kprintf("Total Memory: %ld KB\n"
+          "  Available: %ld KB\n"
+          "  Reserved: %ld KB\n"
+          "  ACPI: %ld KB\n\n",
+          total() / 1024,
+          available() / 1024,
+          reserved() / 1024,
+          acpi_mem() / 1024);
 
   CollectAvailable(mm->entries, nr_entries);
 }
@@ -77,9 +76,8 @@ void MemPages::CollectAvailable(struct multiboot_mmap_entry *entries,
     for (u64 paddr = ent->addr; paddr < ent->addr + ent->len;
          paddr += PAGESIZE) {
       kassert(PGNUM(paddr) < nr_page_structs);
-      Page *pg = &page_structs[PGNUM(paddr)];
+      Page *pg = page(paddr);
       pg->phyaddr = PG(paddr);
-
       // if this address is in kernel image, bss, bootloader
       // data or page of pages, then we ignore them, and
       // therefore they won't be allocated
@@ -95,20 +93,19 @@ void MemPages::CollectAvailable(struct multiboot_mmap_entry *entries,
       }
     }
   }
+  kprintf("Memory System Initialized\n");
 }
-
 
 Page *MemPages::AllocPage()
 {
   if(page_head.alloc_next == page_head.alloc_prev)
     return NULL;
-  Page *allocatored_page;
-  allocatored_page = page_head.alloc_next;
-  page_head.alloc_next = allocatored_page->alloc_next;
+  Page *allocated_page = page_head.alloc_next;
+  page_head.alloc_next = allocated_page->alloc_next;
   page_head.alloc_next->alloc_prev = &page_head;
-  allocatored_page->is_free = false;
-  allocatored_page->is_in_list = false;
-  return allocatored_page;
+  allocated_page->is_free = false;
+  allocated_page->is_in_list = false;
+  return allocated_page;
 }
 
 void MemPages::FreePage(Page *pg)

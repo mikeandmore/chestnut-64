@@ -12,40 +12,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include <kernel/kernel.h>
-#include <kernel/x64/acpi-x64.h>
-#include <kernel/x64/local-apic-x64.h>
+#ifndef PLATFORM_X64_H
+#define PLATFORM_X64_H
 
-namespace rt {
+#include "x64/acpi-x64.h"
+#include "x64/local-apic-x64.h"
+
+namespace kernel {
 
 class PlatformArch {
 public:
-    PlatformArch() {
-    }
+  PlatformArch() {
+  }
 
-    void InitCurrentCPU();
-    void StartCPUs();
-    void AckIRQ();
+  void InitCurrentCPU();
+  void StartCPUs();
+  void AckIRQ();
 
-    /**
-     * Reboot machine using keyboard controller
-     */
-    void Reboot();
+  /**
+   * Reboot machine using keyboard controller
+   */
+  void Reboot();
 
-    uint32_t cpu_count() const { return acpi_.cpus_count(); }
+  uint32_t cpu_count() const { return acpi_.cpus_count(); }
 
-    uint32_t bus_frequency() const {
-        RT_ASSERT(acpi_.local_apic());
-        return acpi_.local_apic()->bus_frequency();
-    }
+  uint32_t bus_frequency() const {
+    RT_ASSERT(acpi_.local_apic());
+    return acpi_.local_apic()->bus_frequency();
+  }
 
-    uint64_t BootTimeMicroseconds() const {
-        return acpi_.BootTimeMicroseconds();
-    }
+  uint64_t BootTimeMicroseconds() const {
+    return acpi_.BootTimeMicroseconds();
+  }
 private:
-    AcpiX64 acpi_;
-    DELETE_COPY_AND_ASSIGN(PlatformArch);
+  AcpiX64 acpi_;
 };
 
-} // namespace rt
+}
+
+#endif /* PLATFORM_X64_H */

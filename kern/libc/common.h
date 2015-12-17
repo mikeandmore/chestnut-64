@@ -16,7 +16,7 @@ typedef uint16 u16;
 typedef uint32 u32;
 typedef uint64 u64;
 
-typedef uint64 size_t;
+typedef unsigned long size_t;
 typedef uint64 uintptr_t;
 
 typedef unsigned long ulong;
@@ -37,12 +37,14 @@ typedef unsigned long ulong;
 
 #define halt() asm("hlt")
 
-#define panic(fmt, ...)                                                 \
-  do {                                                                  \
-    GlobalInstance<kernel::Console>().printf("PANIC: " fmt, ##__VA_ARGS__); \
-    asm("cli");                                                         \
-    halt();                                                             \
-  } while (0)                                                           \
+void kprintf(const char *fmt, ...);
+
+#define panic(fmt, ...)                         \
+  do {                                          \
+    kprintf("PANIC: " fmt, ##__VA_ARGS__);      \
+    asm("cli");                                 \
+    halt();                                     \
+  } while (0)                                   \
 
 #define kassert(expr)                           \
   do {                                          \
@@ -52,11 +54,21 @@ typedef unsigned long ulong;
 
 #ifdef __cplusplus
 
-// placement new
-inline void *operator new(ulong, void *p)     throw() { return p; }
-inline void *operator new[](ulong, void *p)   throw() { return p; }
-inline void  operator delete  (void *, void *) throw() { };
-inline void  operator delete[](void *, void *) throw() { };
+void *operator new(size_t, void *p)     throw();
+void *operator new[](size_t, void *p)   throw();
+void  operator delete  (void *, void *) throw();
+void  operator delete[](void *, void *) throw();
+
+void *operator new(size_t size);
+void *operator new[](size_t size);
+void  operator delete(void *p) throw();
+void  operator delete[](void *p) throw();
+
+template <typename T>
+T&& move(T& o)
+{
+  return (T&&) o;
+}
 
 // getting global variable
 // each module use specialization to export global variable

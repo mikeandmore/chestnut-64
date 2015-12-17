@@ -12,263 +12,266 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "acpi-x64.h"
-#include "local-apic-x64.h"
-#include <kernel/engines.h>
+#include "x64/acpi-x64.h"
+#include "x64/local-apic-x64.h"
+#include "x64/cpu-x64.h"
+#include "libc/common.h"
+#include "libc/string.h"
+#include "mm/allocator.h"
 
-namespace rt {
+namespace kernel {
 
 struct AcpiHeader {
-    uint32_t signature;
-    uint32_t length;
-    uint8_t revision;
-    uint8_t checksum;
-    uint8_t oem[6];
-    uint8_t oemTableId[8];
-    uint32_t oemRevision;
-    uint32_t creatorId;
-    uint32_t creatorRevision;
+  u32 signature;
+  u32 length;
+  u8 revision;
+  u8 checksum;
+  u8 oem[6];
+  u8 oemTableId[8];
+  u32 oemRevision;
+  u32 creatorId;
+  u32 creatorRevision;
 } __attribute__((packed));
 
-constexpr static uint32_t TableUint32(const char* str) {
-    return ((uint32_t)str[0] <<  0) |
-           ((uint32_t)str[1] <<  8) |
-           ((uint32_t)str[2] << 16) |
-           ((uint32_t)str[3] << 24);
+constexpr static u32 TableUint32(const char* str) {
+  return ((u32)str[0] <<  0) |
+    ((u32)str[1] <<  8) |
+    ((u32)str[2] << 16) |
+    ((u32)str[3] << 24);
 }
 
 static_assert(TableUint32("ABCD") == 0x44434241,
               "Invalid table name convertion on current platform.");
 
 struct AcpiHeaderMADT {
-    AcpiHeader header;
-    uint32_t localApicAddr;
-    uint32_t flags;
+  AcpiHeader header;
+  u32 localApicAddr;
+  u32 flags;
 } __attribute__((packed));
 
 struct AcpiHPETAddress {
-    uint8_t addressSpaceId;
-    uint8_t registerBitWidth;
-    uint8_t registerBitOffset;
-    uint8_t reserved;
-    uint64_t address;
+  u8 addressSpaceId;
+  u8 registerBitWidth;
+  u8 registerBitOffset;
+  u8 reserved;
+  u64 address;
 } __attribute__((packed));
 
 struct AcpiHeaderHPET {
-    AcpiHeader header;
-    uint8_t hardwareRevId;
-    uint8_t comparatorCount : 5;
-    uint8_t counterSize : 1;
-    uint8_t reserved : 1;
-    uint8_t legacyPlacement : 1;
-    uint16_t pciVendorId;
-    AcpiHPETAddress address;
-    uint8_t hpetNumber;
-    uint16_t minimumTick;
-    uint8_t pageProtection;
+  AcpiHeader header;
+  u8 hardwareRevId;
+  u8 comparatorCount : 5;
+  u8 counterSize : 1;
+  u8 reserved : 1;
+  u8 legacyPlacement : 1;
+  u16 pciVendorId;
+  AcpiHPETAddress address;
+  u8 hpetNumber;
+  u16 minimumTick;
+  u8 pageProtection;
 } __attribute__((packed));
 
-enum class ApicType : uint8_t {
-    LOCAL_APIC = 0,
+enum class ApicType : u8 {
+  LOCAL_APIC = 0,
     IO_APIC = 1,
     INTERRUPT_OVERRIDE = 2
-};
+    };
 
 struct ApicHeader {
-    ApicType type;
-    uint8_t length;
+  ApicType type;
+  u8 length;
 } __attribute__((packed));
 
 struct ApicLocalApic {
-    ApicHeader header;
-    uint8_t acpiProcessorId;
-    uint8_t apicId;
-    uint32_t flags;
+  ApicHeader header;
+  u8 acpiProcessorId;
+  u8 apicId;
+  u32 flags;
 } __attribute__((packed));
 
 struct ApicIoApic {
-    ApicHeader header;
-    uint8_t ioApicId;
-    uint8_t reserved;
-    uint32_t ioApicAddress;
-    uint32_t globalSystemInterrupt;
+  ApicHeader header;
+  u8 ioApicId;
+  u8 reserved;
+  u32 ioApicAddress;
+  u32 globalSystemInterrupt;
 } __attribute__((packed));
 
-void AcpiX64::Init() {
-    for (uint8_t* p = (uint8_t*)0xe0000; p < (uint8_t*)0x1000000; p += 16) {
-        uint64_t sig = *(uint64_t*)p;
-        if (0x2052545020445352 == sig) { // 'RSD PTR '
-            if (ParseRSDP(p))
-            {
-                break;
-            }
-        }
+void AcpiX64::Init()
+{
+  for (u8* p = static_cast<u8*>(PADDR_TO_KPTR(0xe0000));
+       p < static_cast<u8*>(PADDR_TO_KPTR(0x1000000)); p += 16) {
+    u64 sig = *(u64*)p;
+    if (0x2052545020445352 == sig) { // 'RSD PTR '
+      if (ParseRSDP(p)) {
+        break;
+      }
     }
+  }
 
-    if (io_apics_.size() == 0) {
-        printf("Unable to find IO APIC to setup interrupts.\n");
-        abort();
-    }
+  if (io_apics_.size() == 0) {
+    panic("Unable to find IO APIC to setup interrupts.\n");
+  }
 }
 
-bool AcpiX64::ParseRSDP(void* p) {
-    uint8_t* pt = static_cast<uint8_t*>(p);
+bool AcpiX64::ParseRSDP(void* p)
+{
+  u8* pt = static_cast<u8*>(p);
+  u8 sum = 0;
+  for (u8 i = 0; i < 20; ++i) {
+    sum += pt[i];
+  }
 
-    {	uint8_t sum = 0;
-        for (uint8_t i = 0; i < 20; ++i) {
-            sum += pt[i];
-        }
+  if (sum) {
+    return false;
+  }
 
-        if (sum) {
-            return false;
-        }
+  u8 rev = pt[15];
+  u32 rsdt_addr = 0;
+
+  switch (rev) {
+  case 0:
+    memcpy(&rsdt_addr, pt + 16, sizeof(u32));
+    break;
+  case 2:
+    memcpy(&rsdt_addr, pt + 16, sizeof(u32));
+    break;
+  default:
+    kprintf("ACPI unknown revision.\n");
+    return false;
+  }
+
+  kassert(rsdt_addr);
+  ParseRSDT(reinterpret_cast<AcpiHeader*>((u64)(rsdt_addr)));
+  return true;
+}
+
+void AcpiX64::ParseRSDT(AcpiHeader* ptr)
+{
+  kassert(ptr);
+
+  u32* p = reinterpret_cast<u32*>(ptr + 1);
+  u32* end = reinterpret_cast<u32*>((u8*)ptr + ptr->length);
+
+  while (p < end) {
+    u64 addr = static_cast<u64>(*p++);
+    ParseDT((AcpiHeader *)(uintptr_t)addr);
+  }
+}
+
+void AcpiX64::ParseDT(AcpiHeader* ptr)
+{
+  kassert(ptr);
+  u32 signature = ptr->signature;
+
+  switch (signature) {
+  case TableUint32("APIC"):
+    ParseTableAPIC(reinterpret_cast<AcpiHeaderMADT*>(ptr));
+    break;
+  case TableUint32("HPET"):
+    ParseTableHPET(reinterpret_cast<AcpiHeaderHPET*>(ptr));
+    break;
+  default:
+    break;
+  }
+}
+
+void AcpiX64::ParseTableHPET(AcpiHeaderHPET* header)
+{
+  kassert(header);
+  if (nullptr != hpet_) {
+    // Ignore other HPET devices except first one
+    return;
+  }
+
+  u64 address = header->address.address;
+  kassert(address);
+  kassert(!hpet_);
+  hpet_ = new HpetX64(reinterpret_cast<void*>(address));
+  kassert(hpet_);
+}
+
+void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
+{
+  kassert(header);
+  kassert(header->localApicAddr);
+
+  void* local_apic_address = reinterpret_cast<void*>(
+    static_cast<u64>(header->localApicAddr));
+
+  local_apic_address_ = local_apic_address;
+  local_apic_ = new LocalApicX64(local_apic_address);
+
+  u8* p = (u8*)(header + 1);
+  u8* end = (u8*)header + header->header.length;
+
+  while (p < end) {
+    ApicHeader* header = (ApicHeader*)p;
+    ApicType type = header->type;
+    u8 length = header->length;
+
+    switch (type) {
+    case ApicType::LOCAL_APIC: {
+      ApicLocalApic* s = (ApicLocalApic*)p;
+      AcpiCPU cpu;
+      cpu.cpu_id = s->acpiProcessorId;
+      cpu.local_apic_id = s->apicId;
+      cpu.enabled = (1 == (s->flags & 1));
+      cpus_.PushBack(move(cpu));
+      ++cpu_count_;
     }
-
-    uint8_t rev = pt[15];
-    uint32_t rsdt_addr = 0;
-
-    switch (rev) {
-    case 0:
-        memcpy(&rsdt_addr, pt + 16, sizeof(uint32_t));
-        break;
-    case 2:
-        memcpy(&rsdt_addr, pt + 16, sizeof(uint32_t));
-        break;
+      break;
+    case ApicType::IO_APIC: {
+      ApicIoApic* s = (ApicIoApic*)p;
+      io_apics_.PushBack(new IoApicX64(s->ioApicId,
+                                       (uintptr_t)s->ioApicAddress, s->globalSystemInterrupt));
+    }
+      break;
+    case ApicType::INTERRUPT_OVERRIDE:
+      break;
     default:
-        printf("ACPI unknown revision.\n");
-        return false;
+      // TODO: parse others
+      break;
     }
 
-    RT_ASSERT(rsdt_addr);
-    ParseRSDT(reinterpret_cast<AcpiHeader*>((uint64_t)(rsdt_addr)));
-    return true;
+    p += length;
+  }
 }
 
-void AcpiX64::ParseRSDT(AcpiHeader* ptr) {
-    RT_ASSERT(ptr);
+void AcpiX64::StartCPUs()
+{
+  u8 startup_vec = 0x08;
 
-    uint32_t* p = reinterpret_cast<uint32_t*>(ptr + 1);
-    uint32_t* end = reinterpret_cast<uint32_t*>((uint8_t*)ptr + ptr->length);
-
-    while (p < end) {
-        uint64_t addr = static_cast<uint64_t>(*p++);
-        ParseDT((AcpiHeader *)(uintptr_t)addr);
+  u32 bsp_apic_id = local_apic_->Id();
+  u16 cpus_started = 0;
+  for (const auto& cpu : cpus_) {
+    if (cpu.local_apic_id == bsp_apic_id) {
+      continue;
     }
+    local_apic_->SendApicInit(cpu.local_apic_id);
+  }
+
+  for (const auto& cpu : cpus_) {
+    if (cpu.local_apic_id == bsp_apic_id) {
+      continue;
+    }
+    local_apic_->SendApicStartup(cpu.local_apic_id, startup_vec);
+    ++cpus_started;
+
+    kprintf("Starting #%d...\n", cpus_started);
+    while (trampoline.cpus_counter_value() != cpus_started) {
+      CpuPlatform::WaitPause();
+    }
+  }
+
+  kprintf("Cpus: done.\n");
 }
 
-void AcpiX64::ParseDT(AcpiHeader* ptr) {
-    RT_ASSERT(ptr);
-    uint32_t signature = ptr->signature;
-
-    switch (signature) {
-    case TableUint32("APIC"):
-        ParseTableAPIC(reinterpret_cast<AcpiHeaderMADT*>(ptr));
-        break;
-    case TableUint32("HPET"):
-        ParseTableHPET(reinterpret_cast<AcpiHeaderHPET*>(ptr));
-        break;
-    default:
-        break;
-    }
+void AcpiX64::InitIoApics()
+{
+  for (IoApicX64* ioa : io_apics_) {
+    ioa->Init();
+  }
 }
 
-void AcpiX64::ParseTableHPET(AcpiHeaderHPET* header) {
-    RT_ASSERT(header);
-    if (nullptr != hpet_) {
-        // Ignore other HPET devices except first one
-        return;
-    }
-
-    uint64_t address = header->address.address;
-    RT_ASSERT(address);
-    RT_ASSERT(!hpet_);
-    hpet_ = new HpetX64(reinterpret_cast<void*>(address));
-    RT_ASSERT(hpet_);
 }
-
-void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header) {
-    RT_ASSERT(header);
-    RT_ASSERT(header->localApicAddr);
-
-    void* local_apic_address = reinterpret_cast<void*>(
-        static_cast<uint64_t>(header->localApicAddr));
-
-    local_apic_address_ = local_apic_address;
-    local_apic_ = new LocalApicX64(local_apic_address);
-
-    uint8_t* p = (uint8_t*)(header + 1);
-    uint8_t* end = (uint8_t*)header + header->header.length;
-
-    while (p < end) {
-        ApicHeader* header = (ApicHeader*)p;
-        ApicType type = header->type;
-        uint8_t length = header->length;
-
-        switch (type) {
-        case ApicType::LOCAL_APIC: {
-            ApicLocalApic* s = (ApicLocalApic*)p;
-            AcpiCPU cpu;
-            cpu.cpu_id = s->acpiProcessorId;
-            cpu.local_apic_id = s->apicId;
-            cpu.enabled = (1 == (s->flags & 1));
-            cpus_.push_back(cpu);
-            ++cpu_count_;
-        }
-        break;
-        case ApicType::IO_APIC: {
-            ApicIoApic* s = (ApicIoApic*)p;
-            io_apics_.push_back(new IoApicX64(s->ioApicId,
-                (uintptr_t)s->ioApicAddress, s->globalSystemInterrupt));
-        }
-        break;
-        case ApicType::INTERRUPT_OVERRIDE:
-            break;
-        default:
-            // TODO: parse others
-            break;
-        }
-
-        p += length;
-    }
-}
-
-void AcpiX64::StartCPUs() {
-    CpuTrampolineX64 trampoline;
-    uint8_t startup_vec = 0x08;
-
-    RT_ASSERT(0 == trampoline.cpus_counter_value());
-
-    uint32_t bsp_apic_id = local_apic_->Id();
-    uint16_t cpus_started = 0;
-    for (const AcpiCPU& cpu : cpus_) {
-        if (cpu.local_apic_id == bsp_apic_id) {
-            continue;
-        }
-        local_apic_->SendApicInit(cpu.local_apic_id);
-    }
-
-    GLOBAL_engines()->NonIsolateSleep(50);
-
-    for (const AcpiCPU& cpu : cpus_) {
-        if (cpu.local_apic_id == bsp_apic_id) {
-            continue;
-        }
-        local_apic_->SendApicStartup(cpu.local_apic_id, startup_vec);
-        ++cpus_started;
-
-        printf("Starting #%d...\n", cpus_started);
-        while (trampoline.cpus_counter_value() != cpus_started) {
-            rt::Cpu::WaitPause();
-        }
-    }
-
-    printf("Cpus: done.\n");
-}
-
-void AcpiX64::InitIoApics() {
-    for (IoApicX64* ioa : io_apics_) {
-        ioa->Init();
-    }
-}
-
-} // namespace rt

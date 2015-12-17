@@ -4,6 +4,7 @@
 #define VECTOR_H
 
 #include "libc/common.h"
+#include "libc/string.h"
 #include "console.h"
 
 class BaseVector {
@@ -20,19 +21,27 @@ protected:
     ResetPtr(len, ele_size);
   }
   void Extend(size_t ele_size) {
-    ResetPtr(capacity * 2, ele_size);
+    if (capacity == 0) {
+      ResetPtr(16, ele_size);
+    } else {
+      ResetPtr(capacity * 2, ele_size);
+    }
   }
   void EnsureSpace(size_t idx, size_t ele_size) {
     if (idx >= capacity) Extend(ele_size);
   }
 private:
   void ResetPtr(size_t new_capacity, size_t ele_size);
+public:
+  size_t size() const { return len; }
 };
 
 template <typename T>
 class Vector : public BaseVector {
-
 public:
+
+  typedef T* Iterator;
+
   Vector() : BaseVector(0, nullptr) {}
 
   Vector(Vector &&rhs) : BaseVector(rhs.len, rhs.ptr) {
@@ -50,11 +59,16 @@ public:
     return static_cast<const T*>(ptr)[idx];
   }
 
+  Iterator begin() { return static_cast<T*>(ptr); }
+  const Iterator begin() const { return static_cast<const T*>(ptr); }
+  Iterator end() { return static_cast<T*>(ptr) + len; }
+  const Iterator end() const { return static_cast<const T*>(ptr) + len; }
+
   void Insert(size_t pos, T &&xref) {
-    EnsureSpace(len);
+    EnsureSpace(len, sizeof(T));
     T* arr = static_cast<T*>(ptr);
     memmove(arr + pos + 1, arr + pos, (len - pos) * sizeof(T));
-    new(arr[pos]) T(xref);
+    new(&arr[pos]) T(xref);
     len++;
   }
   void Remove(size_t pos) {
@@ -64,7 +78,7 @@ public:
     len--;
   }
   void PushBack(T &&xref) {
-    Insert(len, xref);
+    Insert(len, (T&&) xref);
   }
   void PopBack() {
     Remove(len);

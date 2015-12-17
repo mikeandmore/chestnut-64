@@ -28,6 +28,17 @@ memcpy(void *dst, const void *src, int len)
 }
 
 void
+memmove(void *dst, const void *src, int len)
+{
+  const char *s = src;
+  char *d = dst;
+  s += len - 1;
+  d += len - 1;
+  while (len--)
+    *d-- = *s--;
+}
+
+void
 memset(void *b, int c, size_t len)
 {
   char *bp = b;

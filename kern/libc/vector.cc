@@ -5,8 +5,12 @@
 void BaseVector::ResetPtr(size_t new_capacity, size_t ele_size)
 {
   void *old_ptr = ptr;
-  ptr = kernel::Alloc(new_capacity * ele_size);
-  memcpy(ptr, old_ptr, len * ele_size);
+  if (new_capacity == 0) {
+    ptr = nullptr;
+  } else {
+    ptr = kernel::Alloc(new_capacity * ele_size);
+    memcpy(ptr, old_ptr, len * ele_size);
+  }
   kernel::Free(old_ptr);
   capacity = new_capacity;
 }

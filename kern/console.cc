@@ -3,6 +3,8 @@
 #include "libc/stdarg.h"
 #include "libc/string.h"
 
+#include "x64/io-x64.h"
+
 namespace kernel {
 
 Console::Console()
@@ -17,6 +19,8 @@ Console::Console()
 
 void Console::putchar(char ch)
 {
+  GlobalInstance<SerialPortX64>().WriteByte(ch);
+
   if (x >= Terminal::kVGAWidth) {
     x = 0;
     y += 1;
@@ -50,15 +54,13 @@ void Console::putchar(char ch)
   x += 1;
 }
 
-void Console::printf(const char *fmt, ...)
+void Console::vprintf(const char *fmt, va_list ap)
 {
-  va_list ap;
   const char *hex = "0123456789abcdef";
   char buf[32], *s;
   unsigned long long u;
   int c, l;
 
-  va_start(ap, fmt);
   while ((c = *fmt++) != '\0') {
     if (c != '%') {
       putchar(c);
@@ -107,6 +109,13 @@ void Console::printf(const char *fmt, ...)
       break;
     }
   }
+}
+
+void Console::printf(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vprintf(fmt, ap);
   va_end(ap);
 }
 
@@ -118,4 +127,12 @@ template <>
 kernel::Console &GlobalInstance()
 {
   return def_console;
+}
+
+void kprintf(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  def_console.vprintf(fmt, ap);
+  va_end(ap);
 }

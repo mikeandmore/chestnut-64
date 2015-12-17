@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#ifndef ACPI_X64_H
+#define ACPI_X64_H
 
-#include <kernel/kernel.h>
-#include <kernel/x64/cpu-trampoline-x64.h>
-#include <kernel/x64/ioapic-x64.h>
-#include <kernel/x64/hpet-x64.h>
+#include "libc/common.h"
+#include "libc/vector.h"
+#include "x64/cpu-trampoline-x64.h"
+#include "x64/ioapic-x64.h"
+#include "x64/hpet-x64.h"
 
-namespace rt {
+namespace kernel {
 
 struct AcpiHeader;
 struct AcpiHeaderMADT;
@@ -27,21 +29,18 @@ struct AcpiHeaderHPET;
 class LocalApicX64;
 
 struct AcpiCPU {
-  uint32_t cpu_id;
-  uint32_t local_apic_id;
+  u32 cpu_id;
+  u32 local_apic_id;
   bool enabled;
 };
 
 class AcpiX64 {
 public:
   AcpiX64()
-    :	local_apic_(nullptr),
-        local_apic_address_(nullptr),
-        hpet_(nullptr),
-        cpu_count_(0) {
-    cpus_.reserve(12);
+    : local_apic_(nullptr), local_apic_address_(nullptr), hpet_(nullptr),
+      cpu_count_(0) {
     Init();
-    RT_ASSERT(local_apic_);
+    kassert(local_apic_);
 
     if (nullptr == hpet_) {
       printf("Unable to find HPET device.");
@@ -51,23 +50,22 @@ public:
     RT_ASSERT(hpet_);
   }
 
+  AcpiX64(const AcpiX64 &rhs) = delete;
+
   LocalApicX64* local_apic() const { return local_apic_; }
   void* local_apic_address() const { return local_apic_address_; }
-  uint32_t cpus_count() const { return cpu_count_; }
+  u32 cpus_count() const { return cpu_count_; }
 
   void InitIoApics();
   void StartCPUs();
 
-  uint64_t BootTimeMicroseconds() const {
-    return hpet_->ReadMicroseconds();
-  }
 private:
   LocalApicX64* local_apic_;
   void* local_apic_address_;
   HpetX64* hpet_;
-  std::vector<AcpiCPU> cpus_;
-  std::vector<IoApicX64*> io_apics_;
-  uint32_t cpu_count_;
+  Vector<AcpiCPU> cpus_;
+  Vector<IoApicX64*> io_apics_;
+  u32 cpu_count_;
 
   void Init();
   bool ParseRSDP(void* p);
@@ -75,7 +73,8 @@ private:
   void ParseDT(AcpiHeader* ptr);
   void ParseTableAPIC(AcpiHeaderMADT* header);
   void ParseTableHPET(AcpiHeaderHPET* header);
-  DELETE_COPY_AND_ASSIGN(AcpiX64);
 };
 
 } // namespace rt
+
+#endif /* ACPI_X64_H */
