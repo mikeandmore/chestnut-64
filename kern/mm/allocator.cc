@@ -3,10 +3,10 @@
 #include "allocator.h"
 #include "console.h"
 
-extern long Stack;
-extern long _loadStart;
-extern long _loadEnd;
-extern long _bssEnd;
+extern long _boot_stack;
+extern long _load_start;
+extern long _load_end;
+extern long _bss_end;
 
 namespace kernel {
 
@@ -14,7 +14,7 @@ void MemPages::Init(struct multiboot_tag_mmap *mm)
 {
 #if 1
   kprintf("Kernel Stack Top: 0x%lx Start: 0x%lx End: 0x%lx BSSEnd: 0x%lx\n",
-          &Stack, &_loadStart, &_loadEnd, &_bssEnd);
+          &_boot_stack, &_load_start, &_load_end, &_bss_end);
 #endif
 
   int nr_entries = (mm->size - sizeof(multiboot_tag_mmap)) / mm->entry_size;
@@ -59,8 +59,8 @@ void MemPages::CollectAvailable(struct multiboot_mmap_entry *entries,
                                 int nr_entries)
 {
   // we are on page [kstart_pg, kend_pg)
-  u64 kstart_pg = PG((u64) &_loadStart);
-  u64 kend_pg = PGALIGN((u64) &_bssEnd) + kBootLoaderSkipPages * PAGESIZE;
+  u64 kstart_pg = PG((u64) &_load_start);
+  u64 kend_pg = PGALIGN((u64) &_bss_end) + kBootLoaderSkipPages * PAGESIZE;
 
   u64 struct_tot_sz = sizeof(Page) * nr_page_structs;
   // we store them right after the kernel, which is starting from

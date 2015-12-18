@@ -16,35 +16,31 @@
 #include "x64/io-x64.h"
 #include "libc/string.h"
 #include "libc/common.h"
+#include "mm/allocator.h"
 
-// located at 64 bit code location
-extern "C" u8 _ap_startup_location;
-
-// located at 16 bit start and finish of code
-extern "C" u8 _ap_startup_start;
-extern "C" u8 _ap_startup_finish;
+extern u8 _smp_start;
+extern u8 _smp_boot_code_end;
 
 // other
-extern "C" volatile u16 _cpus_counter;
-
+extern volatile u16 _smp_cpu_counter;
 
 namespace kernel {
 
 void CpuPlatform::SetupSMPBootCode()
 {
-  kassert(reinterpret_cast<uintptr_t>(&_ap_startup_finish)
-          > reinterpret_cast<uintptr_t>(&_ap_startup_start));
-  const void *startup_loc = &_ap_startup_location;
-  u16 startup_len = reinterpret_cast<uintptr_t>(&_ap_startup_start) -
-    reinterpret_cast<uintptr_t>(&_ap_startup_finish);
+  kassert(reinterpret_cast<uintptr_t>(&_smp_boot_code_end)
+          > reinterpret_cast<uintptr_t>(&_smp_start));
+  const void *startup_loc = &_smp_start;
+  u16 startup_len = reinterpret_cast<uintptr_t>(&_smp_boot_code_end) -
+    reinterpret_cast<uintptr_t>(&_smp_start);
   kassert(startup_loc);
-  memcpy((void *)kLoadAddress, startup_loc, startup_len);
+  memcpy(PADDR_TO_KPTR(kLoadAddress), startup_loc, startup_len);
   kprintf("SMP Boot Code Embeded\n");
 }
 
 u16 CpuPlatform::ReceiveCpuCounter()
 {
-  return _cpus_counter;
+  return _smp_cpu_counter;
 }
 
 }

@@ -15,10 +15,10 @@
 
 typedef u64 paddr;
 
-extern long VIRT_BASE;
+extern long _virt_base;
 
-#define PADDR_TO_KPTR(paddr) ((void *) ((u64) paddr + (u64) &VIRT_BASE))
-#define KPTR_TO_PADDR(ptr) ((u64) ptr - (u64) &VIRT_BASE)
+#define PADDR_TO_KPTR(paddr) ((void *) ((u64) paddr + (u64) &_virt_base))
+#define KPTR_TO_PADDR(ptr) ((u64) ptr - (u64) &_virt_base)
 
 namespace kernel {
 

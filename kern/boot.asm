@@ -26,14 +26,17 @@
 
 use32
 
-[global start]
+[global _boot]
+[global Gdtr1]
+[global Gdtr2]
+[global Gdtr3]
 
 [extern kernel_main]
 
 [section .mbhdr]
-[extern _loadStart]
-[extern _loadEnd]
-[extern _bssEnd]
+[extern _load_start]
+[extern _load_end]
+[extern _bss_end]
 
 align 8
 
@@ -70,7 +73,7 @@ EntryTag:
    dw 3
    dw 0
    dd EntryTagEnd - EntryTag
-   dd start
+   dd _boot
 EntryTagEnd:
 
 align 8
@@ -103,8 +106,8 @@ EndTagsEnd:
 HdrEnd:
 
 [section .boot]
-[extern Stack]
-start:
+[extern _boot_stack]
+_boot:
    cmp eax, 0x36d76289  ; if this matches, we're good
    jne $
    mov ecx, ebx         ; save a copy in case we need it later
@@ -125,28 +128,22 @@ start:
    mov [MemMap], ebx    ; found memory map, so store location for parsing
 
 .load_gdt1:
-   mov eax, Gdtr1
-   lgdt [eax]
+   ;; mov eax, Gdtr1
+   lgdt [Gdtr1]
 
-   push 0x08
-   push .GdtReady
-   retf
+   jmp 0x08:.GdtReady
 
 .GdtReady:
    mov eax, 0x10
    mov ds, ax
    mov ss, ax
-   mov esp, Stack
-
+   mov esp, _boot_stack
 
    call setup_paging_and_long_mode
 
-   mov eax, Gdtr2
+   ; mov eax, Gdtr2
    lgdt [Gdtr2]
-
-   push 0x08
-   push .Gdt2Ready
-   retf
+   jmp 0x08:.Gdt2Ready
 
 use64
 
@@ -156,10 +153,10 @@ use64
    mov es, ax
    mov ss, ax
 
-   mov rsp, Stack + 0xFFFFFFFF80000000
+   mov rsp, _boot_stack + 0xFFFFFFFF80000000
 
-   mov rax, Gdtr3
-   lgdt [rax]
+   ;; mov rax, Gdtr3
+   lgdt [Gdtr3]
 
    mov [gs:0x30], dword 0
 

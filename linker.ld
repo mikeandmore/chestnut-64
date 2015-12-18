@@ -1,15 +1,17 @@
-ENTRY(start)
+ENTRY(_boot)
 OUTPUT_FORMAT(elf64-x86-64)
 
-VIRT_BASE = 0xFFFFFFFF80000000;
+_virt_base = 0xFFFFFFFF80000000;
 
 SECTIONS {
    . = 0x100000;
 
    .boot : {
       *(.mbhdr)
-      _loadStart = .;
+      _load_start = .;
       *(.boot)
+      . = ALIGN(4096);
+      *(.smp_boot)
       . = ALIGN(4096);
       Pml4 = .;
       . += 0x1000;
@@ -18,35 +20,35 @@ SECTIONS {
       Pd = .;
       . += 0x1000;
       . += 0x8000;
-      Stack = .;
+      _boot_stack = .;
    }
 
-   . += VIRT_BASE;
+   . += _virt_base;
 
-   .text ALIGN(0x1000) : AT(ADDR(.text) - VIRT_BASE) {
+   .text ALIGN(0x1000) : AT(ADDR(.text) - _virt_base) {
       *(.text)
       *(.gnu.linkonce.t*)
    }
 
-   .data ALIGN(0x1000) : AT(ADDR(.data) - VIRT_BASE) {
+   .data ALIGN(0x1000) : AT(ADDR(.data) - _virt_base) {
       *(.data)
       *(.gnu.linkonce.d*)
    }
 
-   .rodata ALIGN(0x1000) : AT(ADDR(.rodata) - VIRT_BASE) {
+   .rodata ALIGN(0x1000) : AT(ADDR(.rodata) - _virt_base) {
       *(.rodata*)
       *(.gnu.linkonce.r*)
    }
 
-   _loadEnd = . - VIRT_BASE;
+   _load_end = . - _virt_base;
 
-   .bss ALIGN(0x1000) : AT(ADDR(.bss) - VIRT_BASE) {
+   .bss ALIGN(0x1000) : AT(ADDR(.bss) - _virt_base) {
       *(.bss)
       *(COMMON)
       *(.gnu.linkonce.b*)
    }
 
-   _bssEnd = . - VIRT_BASE;
+   _bss_end = . - _virt_base;
 
    /DISCARD/ : {
       *(.comment)

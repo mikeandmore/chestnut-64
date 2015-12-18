@@ -19,6 +19,7 @@ add_library(acpica ${ACPICA_SOURCE})
 
 add_executable(kernel.bin
         kern/boot.asm
+        kern/smp-boot.asm
         kern/main.cc
         kern/terminal.cc
         kern/console.cc
