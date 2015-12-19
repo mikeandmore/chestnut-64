@@ -151,21 +151,25 @@ use64
         xor ax, ax
 	mov gs, ax
 
-   	mov eax, 0x10
+   	;; mov eax, 0x10
         mov ds, ax
 	mov es, ax
 	mov ss, ax
 
-	mov rsp, _boot_stack + 0xFFFFFFFF80000000
+	mov rsp, _boot_stack + 0xFFFFFF0000000000
 
-	;; mov rax, Gdtr3
-	lgdt [Gdtr3]
+	mov rax, Gdtr3
+        add rax, 0xFFFFFF0000000000
+        lgdt [rax]
 
 	; mov [gs:0x30], dword 0
 
-	mov rdi, [MemMap]
+        mov rax, MemMap
+        add rax, 0xFFFFFF0000000000
+	mov rdi, [rax]
 
-	call kernel_main
+        mov rax, kernel_main
+	call rax
 
 	cli
 	hlt
@@ -178,19 +182,20 @@ use32
 setup_paging_and_long_mode:
    	mov eax, Pdpt
 	or eax, 1
-	mov [Pml4], eax
-	mov [Pml4 + 0xFF8], eax
+       	mov [Pml4], eax
+	mov dword [Pml4 + 0xFF0], eax
+        mov dword [Pdpt], 0x0083
 
-	mov eax, Pd
-	or eax, 1
-	mov [Pdpt], eax
-	mov [Pdpt + 0xFF0], eax
+	;; mov eax, Pd
+	;; or eax, 1
+	;; mov [Pdpt], eax
+	;; mov [Pdpt + 0xFF0], eax
 
         ;; kernel can only do 8M direct access of physical memory
-	mov dword [Pd], 0x000083
-	mov dword [Pd + 8], 0x200083
-	mov dword [Pd + 16], 0x400083
-	mov dword [Pd + 24], 0x600083
+	;; mov dword [Pd], 0x000083
+	;; mov dword [Pd + 8], 0x200083
+	;; mov dword [Pd + 16], 0x400083
+	;; mov dword [Pd + 24], 0x600083
 
 	mov eax, Pml4
 	mov cr3, eax
@@ -234,7 +239,7 @@ Gdtr2:
 
 Gdtr3:
         dw 23
-        dq TmpGdt + 24 + 0xFFFFFFFF80000000
+        dq TmpGdt + 24 + 0xFFFFFF0000000000
 
 MemMap:
         dd 0

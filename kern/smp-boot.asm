@@ -82,7 +82,8 @@ _smp_start64:
 
         mov rdi, 0
 
-        call kernel_main
+        mov rax, kernel_main
+        call rax
 
         cli
         hlt

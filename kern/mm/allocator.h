@@ -9,16 +9,24 @@
 #define PAGESIZE (1 << PAGESHIFT)
 #define PAGEMASK (PAGESIZE - 1)
 
+#define LARGEPAGESHIFT 21
+#define LARGEPAGESIZE (1 << LARGEPAGESHIFT)
+#define LARGEPAGEMASK (LARGEPAGESHIFT - 1)
+
+#define HUGEPAGESHIFT 30
+#define HUGEPAGESIZE (1 << HUGEPAGESHIFT)
+#define HUGEPAGEMASK (HUGEPAGESIZE - 1)
+
+extern long _virt_base;
+
 #define KERN_OFFSET ((u64) &_virt_base)
-#define KERN_HUGE_PAGE_MAX (8 << 20)
+#define KERN_MAX_MEMORY (512ULL << 30)
 
 #define PGNUM(pg_addr) (pg_addr >> PAGESHIFT)
 #define PG(addr) (PGNUM(addr) << PAGESHIFT)
 #define PGALIGN(addr) (((addr - 1) | PAGEMASK) + 1)
 
 typedef u64 paddr;
-
-extern long _virt_base;
 
 #define PADDR_TO_KPTR(paddr) ((void *) ((u64) paddr + KERN_OFFSET))
 #define KPTR_TO_PADDR(ptr) ((u64) ptr - KERN_OFFSET)
@@ -55,6 +63,7 @@ public:
   u64 reserved() const { return reserved_size_; }
   u64 acpi_mem() const { return acpi_size_; }
   u64 total() const { return tot_size_; }
+  u64 max_physical_addr() const { return max_phy_; }
 
   Page *AllocPage();
   void FreePage(Page *pg);
@@ -71,6 +80,7 @@ private:
   u64 avail_size_, reserved_size_, acpi_size_;
   u64 tot_size_;
   u64 avail_low_;
+  u64 max_phy_;
 
   Page page_head; // free list (double linked_list)
   Page *page_structs; // array of pages

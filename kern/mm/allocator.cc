@@ -36,12 +36,15 @@ void MemPages::Init(struct multiboot_tag_mmap *mm)
       acpi_size_ += entry->len;
     }
     tot_size_ += entry->len;
+    max_phy_ = max_phy_ > entry->addr + entry->len
+      ? max_phy_ : entry->addr + entry->len;
     nr_page_structs = max_kern_mem / PAGESIZE;
 
     kprintf("Addr: %lx Len: %lx Type: %d\n",
                    entry->addr, entry->len, entry->type);
   }
-  kprintf("Max Kern Mem: %ld KB\n", max_kern_mem / 1024);
+  kprintf("Max Kern Mem: %ld KB, Max Physical Address: %lx\n",
+          max_kern_mem / 1024, max_phy_);
 
   kprintf("Total Memory: %ld KB\n"
           "  Available: %ld KB\n"

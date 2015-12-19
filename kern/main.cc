@@ -21,9 +21,18 @@ __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
   GlobalInstance<kernel::MemPages>().Init(boot_mem_map);
   kernel::InitSlab();
 
-  kernel::PageTableX64 pt;
-  u64 t = KERN_OFFSET;
-  kprintf("huge page paddr %x ->%x\n", t, pt[t][t][t].physical_address());
+  // kernel::InitKernelPageTable();
+  for (u64 t = KERN_OFFSET;
+       t < KERN_OFFSET + GlobalInstance<kernel::MemPages>().max_physical_addr();
+       t += HUGEPAGESIZE) {
+    kprintf("huge page paddr %lx ->%lx\n", t, kernel::GetKernelPageTable()[t][t].physical_address());
+  }
+
+  Vector<int> vec;
+  for (int i = 0; i < 100; i++) {
+    vec.PushBack(move(i));
+  }
+
 
   // kprintf("Booting From Cpu %d...\n", kernel::CpuPlatform::id());
   // kernel::AcpiX64 acpi;

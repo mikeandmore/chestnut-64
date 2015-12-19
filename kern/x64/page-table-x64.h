@@ -27,6 +27,10 @@ public:
     set_present(true);
   }
 
+  void Clear() {
+    entry = 0;
+  }
+
   CommonBaseEntry(u64 paddr) : entry(paddr) {
     set_present(true);
   }
@@ -97,6 +101,9 @@ static_assert(sizeof(CommonEntry<4>) == 8
               && sizeof(PdptEntry) == 8
               && sizeof(PdEntry) == 8
               && sizeof(PtEntry) == 8, "Entry should be 8 bytes");
+
+void InitKernelPageTable();
+PageTableX64 &GetKernelPageTable();
 
 }
 

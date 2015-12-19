@@ -1,7 +1,7 @@
 ENTRY(_boot)
 OUTPUT_FORMAT(elf64-x86-64)
 
-_virt_base = 0xFFFFFFFF80000000;
+_virt_base = 0xFFFFFF0000000000;
 
 SECTIONS {
    . = 0x100000;
