@@ -116,6 +116,7 @@ void AcpiX64::Init()
 
 bool AcpiX64::ParseRSDP(void* p)
 {
+  kprintf("parsing RSDP %x\n", p);
   u8* pt = static_cast<u8*>(p);
   u8 sum = 0;
   for (u8 i = 0; i < 20; ++i) {
@@ -142,6 +143,7 @@ bool AcpiX64::ParseRSDP(void* p)
   }
 
   kassert(rsdt_addr);
+
   ParseRSDT(reinterpret_cast<AcpiHeader*>((u64)(rsdt_addr)));
   return true;
 }
@@ -150,11 +152,14 @@ void AcpiX64::ParseRSDT(AcpiHeader* ptr)
 {
   kassert(ptr);
 
+  kprintf("parsing RSDT, ptr %x\n", ptr);
+
   u32* p = reinterpret_cast<u32*>(ptr + 1);
   u32* end = reinterpret_cast<u32*>((u8*)ptr + ptr->length);
 
   while (p < end) {
     u64 addr = static_cast<u64>(*p++);
+    kprintf("parsing DT %lx\n", addr);
     ParseDT((AcpiHeader *)(uintptr_t)addr);
   }
 }
@@ -238,7 +243,7 @@ void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
   }
 }
 
-void AcpiX64::StartCPUs()
+void AcpiX64::BootSmp()
 {
   u8 startup_vec = 0x08;
   CpuPlatform::SetupSMPBootCode();

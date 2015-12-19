@@ -9,6 +9,9 @@
 #define PAGESIZE (1 << PAGESHIFT)
 #define PAGEMASK (PAGESIZE - 1)
 
+#define KERN_OFFSET ((u64) &_virt_base)
+#define KERN_HUGE_PAGE_MAX (8 << 20)
+
 #define PGNUM(pg_addr) (pg_addr >> PAGESHIFT)
 #define PG(addr) (PGNUM(addr) << PAGESHIFT)
 #define PGALIGN(addr) (((addr - 1) | PAGEMASK) + 1)
@@ -17,14 +20,15 @@ typedef u64 paddr;
 
 extern long _virt_base;
 
-#define PADDR_TO_KPTR(paddr) ((void *) ((u64) paddr + (u64) &_virt_base))
-#define KPTR_TO_PADDR(ptr) ((u64) ptr - (u64) &_virt_base)
+#define PADDR_TO_KPTR(paddr) ((void *) ((u64) paddr + KERN_OFFSET))
+#define KPTR_TO_PADDR(ptr) ((u64) ptr - KERN_OFFSET)
 
 namespace kernel {
 
 class MemCacheBase;
 
 class Page {
+  // TODO: shrink the size of this class
 public:
   paddr physical_address() const { return phyaddr; }
 private:

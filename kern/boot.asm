@@ -148,6 +148,9 @@ _boot:
 use64
 
 .Gdt2Ready:
+        xor ax, ax
+	mov gs, ax
+
    	mov eax, 0x10
         mov ds, ax
 	mov es, ax
@@ -159,8 +162,6 @@ use64
 	lgdt [Gdtr3]
 
 	; mov [gs:0x30], dword 0
-
-	mov gs, ax
 
 	mov rdi, [MemMap]
 
@@ -185,6 +186,7 @@ setup_paging_and_long_mode:
 	mov [Pdpt], eax
 	mov [Pdpt + 0xFF0], eax
 
+        ;; kernel can only do 8M direct access of physical memory
 	mov dword [Pd], 0x000083
 	mov dword [Pd + 8], 0x200083
 	mov dword [Pd + 16], 0x400083

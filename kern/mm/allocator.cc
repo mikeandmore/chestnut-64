@@ -62,6 +62,7 @@ void MemPages::CollectAvailable(struct multiboot_mmap_entry *entries,
   u64 kstart_pg = PG((u64) &_load_start);
   u64 kend_pg = PGALIGN((u64) &_bss_end) + kBootLoaderSkipPages * PAGESIZE;
 
+  kprintf("sizeof Page =  %d\n", sizeof(Page));
   u64 struct_tot_sz = sizeof(Page) * nr_page_structs;
   // we store them right after the kernel, which is starting from
   // [kend_pg, kend_pg + nr_pages_structs * PAGESIZE)

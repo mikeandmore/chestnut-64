@@ -54,9 +54,10 @@ public:
   LocalApicX64* local_apic() const { return local_apic_; }
   void* local_apic_address() const { return local_apic_address_; }
   u32 cpus_count() const { return cpu_count_; }
+  HpetX64 *timer() { return hpet_; }
 
   void InitIoApics();
-  void StartCPUs();
+  void BootSmp();
 
 private:
   LocalApicX64* local_apic_;

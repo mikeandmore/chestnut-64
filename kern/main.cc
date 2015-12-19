@@ -8,6 +8,9 @@
 #include "libc/vector.h"
 
 #include "x64/io-x64.h"
+#include "x64/cpu-x64.h"
+#include "x64/acpi-x64.h"
+#include "x64/page-table-x64.h"
 
 __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
 {
@@ -17,4 +20,13 @@ __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
   kprintf("Chestnut-64 Booting...\n");
   GlobalInstance<kernel::MemPages>().Init(boot_mem_map);
   kernel::InitSlab();
+
+  kernel::PageTableX64 pt;
+  u64 t = KERN_OFFSET;
+  kprintf("huge page paddr %x ->%x\n", t, pt[t][t][t].physical_address());
+
+  // kprintf("Booting From Cpu %d...\n", kernel::CpuPlatform::id());
+  // kernel::AcpiX64 acpi;
+  // kprintf("ACPI Initialized\n");
+
 }
