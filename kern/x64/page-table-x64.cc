@@ -26,8 +26,8 @@ void InitKernelPageTable()
   // and we never need to jump back again to low address any more. Therefore,
   // we unmapped the low address => low address mapping for protection.
   kernel_pgt[0].Clear();
+  kernel_pgt.Install();
 }
-
 PageTableX64 &GetKernelPageTable()
 {
   return kernel_pgt;

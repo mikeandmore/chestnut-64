@@ -1,8 +1,9 @@
 #include "terminal.h"
+#include "mm/allocator.h"
 
 namespace kernel {
 
-volatile u16 *const Terminal::kVGABuffer = (u16 *) 0x0B8000;
+volatile u16 *const Terminal::kVGABuffer = (u16*) PADDR_TO_KPTR(0x0B8000);
 
 void Terminal::DrawChar(char ch, Color fg, Color bg, uint8 x, uint8 y)
 {

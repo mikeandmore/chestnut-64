@@ -158,21 +158,16 @@ use64
 
 	mov rsp, _boot_stack + 0xFFFFFF0000000000
 
-	mov rax, Gdtr3
-        add rax, 0xFFFFFF0000000000
+	mov rax, Gdtr3 + 0xFFFFFF0000000000
         lgdt [rax]
 
 	; mov [gs:0x30], dword 0
 
-        mov rax, MemMap
-        add rax, 0xFFFFFF0000000000
+        mov rax, MemMap + 0xFFFFFF0000000000
 	mov rdi, [rax]
 
         mov rax, kernel_main
 	call rax
-
-	cli
-	hlt
 
 use32
 [extern Pml4]
@@ -182,9 +177,15 @@ use32
 setup_paging_and_long_mode:
    	mov eax, Pdpt
 	or eax, 1
-       	mov [Pml4], eax
-	mov dword [Pml4 + 0xFF0], eax
+
+       	mov dword [Pml4], eax
+        mov dword [Pml4 + 0x04], 0
+
+        mov dword [Pml4 + 0xFF0], eax
+        mov dword [Pml4 + 0xFF4], 0
+
         mov dword [Pdpt], 0x0083
+        mov dword [Pdpt + 0x04], 0
 
 	;; mov eax, Pd
 	;; or eax, 1

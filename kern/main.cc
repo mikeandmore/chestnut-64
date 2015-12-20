@@ -21,7 +21,9 @@ __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
   GlobalInstance<kernel::MemPages>().Init(boot_mem_map);
   kernel::InitSlab();
 
-  // kernel::InitKernelPageTable();
+  kernel::InitKernelPageTable();
+  kprintf("testing...\n");
+
   for (u64 t = KERN_OFFSET;
        t < KERN_OFFSET + GlobalInstance<kernel::MemPages>().max_physical_addr();
        t += HUGEPAGESIZE) {
@@ -38,4 +40,6 @@ __link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
   // kernel::AcpiX64 acpi;
   // kprintf("ACPI Initialized\n");
 
+  kernel::CpuPlatform::HangSystem();
+  kernel::CpuPlatform::WaitPause();
 }
