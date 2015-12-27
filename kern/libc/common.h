@@ -37,6 +37,12 @@ typedef unsigned long ulong;
 
 #define halt() asm("hlt")
 
+/* telling the compiler not to re-order the instructions */
+static inline void soft_barrier()
+{
+  asm volatile("" : : : "memory");
+}
+
 void kprintf(const char *fmt, ...);
 
 #define panic(fmt, ...)                         \

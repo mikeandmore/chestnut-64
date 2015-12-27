@@ -24,10 +24,20 @@ struct CpuMSRValue {
   u32 hi;
   CpuMSRValue() : lo(0), hi(0) {}
   CpuMSRValue(u32 lo_, u32 hi_) : lo(lo_), hi(hi_) {}
+  CpuMSRValue(u64 val) : lo((u32) val), hi((u32) (val >> 32)) {}
 };
 
 class CpuPlatform {
 public:
+  static u64 ReadTimeStamp() {
+    u32 lo, hi;
+    u64 res;
+    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    res = hi;
+    res <<= 32;
+    return res | lo;
+  }
+
   static CpuMSRValue GetMSR(u32 msr) {
     CpuMSRValue value;
     asm volatile("rdmsr" : "=a"(value.lo), "=d"(value.hi) : "c"(msr));

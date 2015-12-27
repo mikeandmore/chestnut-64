@@ -34,7 +34,8 @@ add_executable(kernel.bin
         kern/x64/hpet-x64.cc
         kern/x64/ioapic-x64.cc
         kern/x64/local-apic-x64.cc
-        kern/x64/page-table-x64.cc)
+        kern/x64/page-table-x64.cc
+        kern/x64/kvm-clock.cc)
 
 target_link_libraries(kernel.bin acpica)
 
