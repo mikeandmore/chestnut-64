@@ -116,7 +116,7 @@ void AcpiX64::Init()
 
 bool AcpiX64::ParseRSDP(void* p)
 {
-  kprintf("parsing RSDP %x\n", p);
+  kprintf("RSDP %lx\n", p);
   u8* pt = static_cast<u8*>(p);
   u8 sum = 0;
   for (u8 i = 0; i < 20; ++i) {
@@ -143,8 +143,7 @@ bool AcpiX64::ParseRSDP(void* p)
   }
 
   kassert(rsdt_addr);
-
-  ParseRSDT(reinterpret_cast<AcpiHeader*>((u64)(rsdt_addr)));
+  ParseRSDT(reinterpret_cast<AcpiHeader*>(PADDR_TO_KPTR(rsdt_addr)));
   return true;
 }
 
@@ -152,20 +151,20 @@ void AcpiX64::ParseRSDT(AcpiHeader* ptr)
 {
   kassert(ptr);
 
-  kprintf("parsing RSDT, ptr %x\n", ptr);
+  kprintf("parsing RSDT, ptr %lx\n", ptr);
 
   u32* p = reinterpret_cast<u32*>(ptr + 1);
   u32* end = reinterpret_cast<u32*>((u8*)ptr + ptr->length);
 
   while (p < end) {
     u64 addr = static_cast<u64>(*p++);
-    kprintf("parsing DT %lx\n", addr);
-    ParseDT((AcpiHeader *)(uintptr_t)addr);
+    ParseDT((AcpiHeader *)PADDR_TO_KPTR(addr));
   }
 }
 
 void AcpiX64::ParseDT(AcpiHeader* ptr)
 {
+  kprintf("DT %lx\n", ptr);
   kassert(ptr);
   u32 signature = ptr->signature;
 
@@ -189,10 +188,12 @@ void AcpiX64::ParseTableHPET(AcpiHeaderHPET* header)
     return;
   }
 
+  kprintf("Hpet %lx\n", header);
+
   u64 address = header->address.address;
   kassert(address);
   kassert(!hpet_);
-  hpet_ = new HpetX64(reinterpret_cast<void*>(address));
+  hpet_ = new HpetX64(PADDR_TO_KPTR(address));
   kassert(hpet_);
 }
 
@@ -201,8 +202,10 @@ void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
   kassert(header);
   kassert(header->localApicAddr);
 
+  kprintf("Apic %lx\n", header);
+
   void* local_apic_address = reinterpret_cast<void*>(
-    static_cast<u64>(header->localApicAddr));
+    PADDR_TO_KPTR(header->localApicAddr));
 
   local_apic_address_ = local_apic_address;
   local_apic_ = new LocalApicX64(local_apic_address);

@@ -24,6 +24,7 @@ HpetX64::HpetX64(void* address)
                 reinterpret_cast<u8*>(address) + kCounterOffset)),
      frequency_(0),
      us_div_(0) {
+  kprintf("HpetX64::HpetX64(%lx) %lx %lx\n", address, registers_, counter_);
   kassert(registers_);
 
   u32 period = registers_->counter_period; // in femptoseconds (10^-15 seconds)

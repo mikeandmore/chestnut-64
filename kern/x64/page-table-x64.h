@@ -64,7 +64,7 @@ public:
     }
     auto next_level = static_cast<CommonEntry<Level - 1> *>(
       PADDR_TO_KPTR(physical_address()));
-    u16 offset = (u16) ((vaddr >> (12 + Level * 9)) & 0x01FF);
+    u16 offset = (u16) ((vaddr >> (12 + (Level -1) * 9)) & 0x01FF);
     kassert(offset < 512);
     return next_level[offset];
   }
