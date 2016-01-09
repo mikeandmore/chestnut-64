@@ -1,35 +1,9 @@
-%macro gdt_entry 3
-   dq (((%1) << 32) & 0xFF00000000000000) | \
-      (((%3) << 40) & 0x00F0FF0000000000) | \
-      (((%2) << 32) & 0x000F000000000000) | \
-      (((%1) << 8)  & 0x000000FF00000000) | \
-      (((%1) << 16) & 0x00000000FFFF0000) | \
-      ((%2)         & 0x000000000000FFFF)
-%endmacro
-
-%define GRANULARITY_BIT(val) (val << 15)
-%define SIZE_BIT(val)        (val << 14)
-%define LONG_BIT(val)        (val << 13)
-
-%define PRESENT_BIT(val)     (val << 7)
-%define PRIVILEGE_BITS(val)  (val << 5)
-%define EXECUTABLE_BIT(val)  (val << 3)
-%define DIRECTION_BIT(val)   (val << 2)
-%define CONFORMING_BIT(val)  DIRECTION_BIT(val)
-%define READABLE_BIT(val)    (val << 1)
-%define WRITABLE_BIT(val)    READABLE_BIT(val)
-%define ACCESSED_BIT(val)    (val)
-
-%define ACCESS_FIELD(vals)   ((vals) | (1 << 4))
-
-%define NULL_GDT_ENTRY gdt_entry 0, 0, 0
-
 use32
 
 [global _boot]
-[global Gdtr1]
-[global Gdtr2]
-[global Gdtr3]
+[global GDT32Pointer]
+[global GDT64Pointer]
+[global GDT64VPointer]
 
 [extern kernel_main]
 
@@ -128,9 +102,7 @@ _boot:
         mov [MemMap], ebx    ; found memory map, so store location for parsing
 
 .load_gdt1:
-        ;; mov eax, Gdtr1
-        lgdt [Gdtr1]
-
+        lgdt [GDT32Pointer]
         jmp 0x08:.GdtReady
 
 .GdtReady:
@@ -142,7 +114,7 @@ _boot:
 	call setup_paging_and_long_mode
 
 	; mov eax, Gdtr2
-	lgdt [Gdtr2]
+	lgdt [GDT64Pointer]
 	jmp 0x08:.Gdt2Ready
 
 use64
@@ -158,7 +130,7 @@ use64
 
 	mov rsp, _boot_stack + 0xFFFFFF0000000000
 
-	mov rax, Gdtr3 + 0xFFFFFF0000000000
+	mov rax, GDT64VPointer + 0xFFFFFF0000000000
         lgdt [rax]
 
 	; mov [gs:0x30], dword 0
@@ -216,31 +188,63 @@ setup_paging_and_long_mode:
 
 	ret
 
-TmpGdt:
-   	NULL_GDT_ENTRY
-	gdt_entry 0, 0xFFFFF, ACCESS_FIELD(GRANULARITY_BIT(1) | SIZE_BIT(1) | \
-	                                      PRESENT_BIT(1) | EXECUTABLE_BIT(1) | \
-	                                      READABLE_BIT(1))
-	gdt_entry 0, 0xFFFFF, ACCESS_FIELD(GRANULARITY_BIT(1) | SIZE_BIT(1) | \
-	                                      PRESENT_BIT(1) | READABLE_BIT(1))
-	NULL_GDT_ENTRY
-	gdt_entry 0, 0, ACCESS_FIELD(SIZE_BIT(1) | LONG_BIT(1) | PRESENT_BIT(1) | \
-	                                EXECUTABLE_BIT(1) | READABLE_BIT(1))
-	gdt_entry 0, 0, ACCESS_FIELD(SIZE_BIT(1) | LONG_BIT(1) | PRESENT_BIT(1) | \
-	                                READABLE_BIT(1))
+GDT32:
+        dw 0         ; Limit (low).
+        dw 0         ; Base (low).
+        db 0         ; Base (middle)
+        db 0         ; Access.
+        db 0         ; Granularity.
+        db 0         ; Base (high).
 
-Gdtr1:
-        dw 23
-        dd TmpGdt
+        dw 0xFFFF    ; Limit (low)
+        dw 0         ; Base (low)
+        db 0         ; Base (middle)
+        db 10011010b ; Access
+        db 11001111b ; Granularity
+        db 0         ; Base (high)
 
-Gdtr2:
-        dw 23
-        dd TmpGdt + 24
-        dd 0
+        dw 0xFFFF    ; Limit (low).
+        dw 0         ; Base (low).
+        db 0         ; Base (middle)
+        db 10010010b ; Access (read/write).
+        db 11001111b ; Granularity.
+        db 0         ; Base (high).
+.EndGDT32:
 
-Gdtr3:
-        dw 23
-        dq TmpGdt + 24 + 0xFFFFFF0000000000
+GDT64:
+        dw 0         ; Limit (low).
+        dw 0         ; Base (low).
+        db 0         ; Base (middle)
+        db 0         ; Access.
+        db 0         ; Granularity.
+        db 0         ; Base (high).
+
+        dw 0         ; Limit (low).
+        dw 0         ; Base (low).
+        db 0         ; Base (middle)
+        db 10011010b ; Access (exec/read).
+        db 10100000b ; Granularity.
+        db 0         ; Base (high).
+
+        dw 0         ; Limit (low).
+        dw 0         ; Base (low).
+        db 0         ; Base (middle)
+        db 10010010b ; Access (read/write).
+        db 10100000b ; Granularity.
+        db 0         ; Base (high).
+.EndGDT64:
+
+GDT32Pointer:
+        dw GDT32.EndGDT32 - GDT32 - 1
+        dd GDT32
+
+GDT64Pointer:
+        dw GDT64.EndGDT64 - GDT64 - 1
+        dq GDT64
+
+GDT64VPointer:
+        dw GDT64.EndGDT64 - GDT64 - 1
+        dq GDT64 + 0xFFFFFF0000000000
 
 MemMap:
         dd 0

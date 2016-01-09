@@ -125,7 +125,13 @@ public:
   }
 
   void write_serial(char a) {
-    while (is_transmit_empty() == 0);
+    // FIXME:
+    // It seems KVM doesn't support polling with serial port. (KVM will hang on
+    // ``inb`` instruction. Don't know why.)
+    //
+    // It's a para-virt device anyway, let's push this into the buffer.
+    //
+    // while (is_transmit_empty() == 0);
     IoPortsX64::OutB(port_, a);
   }
 private:

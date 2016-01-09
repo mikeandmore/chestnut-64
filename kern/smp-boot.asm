@@ -5,9 +5,9 @@
 [global _smp_boot_code_end]
 [extern Pml4]
 [extern kernel_main]
-[extern Gdtr1]
-[extern Gdtr2]
-[extern Gdtr3]
+[extern GDT32Pointer]
+[extern GDT64Pointer]
+[extern GDT64VPointer]
 
 use16
 
@@ -22,7 +22,7 @@ _smp_start:
         mov fs,ax
         mov gs,ax
 
-        lgdt [dword Gdtr1]
+        lgdt [dword GDT32Pointer]
 
         jmp dword 0x08:_smp_start32
 
@@ -60,7 +60,7 @@ _smp_start32:
         xor edi, edi
         xor ebp, ebp
 
-        lgdt [Gdtr2]
+        lgdt [GDT64Pointer]
         jmp 0x08:_smp_start64
 use64
 _smp_start64:
@@ -77,7 +77,7 @@ _smp_start64:
         xor rbp, rbp
 
         ;; mov rsp, [StackTop]... or gs related?
-        lgdt [Gdtr3]
+        lgdt [GDT64VPointer]
         mov [gs:0x30], dword 0
 
         mov rdi, 0
