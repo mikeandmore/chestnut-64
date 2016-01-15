@@ -12,24 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-#include <kernel/kernel.h>
-#include <kernel/x64/io-x64.h>
+#ifndef IRQS_X64_H
+#define IRQS_X64_H
 
-namespace rt {
+#include "libc/common.h"
+#include "x64/io-x64.h"
+
+namespace kernel {
 
 class IrqsArch {
 public:
-    IrqsArch() {}
-    void SetUp();
+  IrqsArch(const IrqsArch& rhs) = delete;
+  void SetUp();
 private:
-    void DisableNMI();
-    void EnableNMI();
-    void InstallGate(uint8_t vector, uint64_t (*func)(), uint8_t type);
+  void DisableNMI();
+  void EnableNMI();
+  void InstallGate(u8 vector, u64 (*func)(), u8 type);
 
-    static const uint64_t kIDTTableBase = 0;
-    static const uint8_t kCodeSelector = 0x8;
-    DELETE_COPY_AND_ASSIGN(IrqsArch);
+  static const u64 kIDTTableBase = 0;
+  static const u8 kCodeSelector = 0x8;
 };
 
-} // namespace rt
+}
+
+
+#endif /* IRQS-X64_H */

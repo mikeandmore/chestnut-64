@@ -72,7 +72,7 @@ public:
 
   Page *page(paddr addr) { return &page_structs[PGNUM(addr)]; }
 private:
-  static const int kBootLoaderSkipPages = 16;
+  static const int kBootLoaderSkipPages = 48;
   void CollectAvailable(struct multiboot_mmap_entry *entries,
                         int nr_entries);
 

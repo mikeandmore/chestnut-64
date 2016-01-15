@@ -116,9 +116,7 @@ public:
   }
 
   void Write(LocalApicRegister reg, u32 value) {
-    kprintf("writing to %lx\n", (local_apic_base + static_cast<u32>(reg)));
     *(volatile u32*)(local_apic_base + static_cast<u32>(reg)) = value;
-    kprintf("value %u\n", value);
   }
 
   inline void InterruptCommand(LocalApicInterruptCommand command) {

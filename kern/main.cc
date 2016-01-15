@@ -48,8 +48,9 @@ MultibootInfo ParseMultibootInfo(u8 *mbi)
   return info;
 }
 
-__link void kernel_main(u8 *mbi)
+__link void kernel_main(u64 mbi_paddr)
 {
+  u8 *mbi = (u8 *) PADDR_TO_KPTR(mbi_paddr);
   InitializeGlobal<kernel::SerialPortX64>();
   InitializeGlobal<kernel::Terminal, kernel::Console, kernel::MemPages>();
   auto info = ParseMultibootInfo(mbi);
@@ -78,7 +79,9 @@ __link void kernel_main(u8 *mbi)
   kernel::AcpiX64 acpi;
   kprintf("ACPI Initialized\n");
   acpi.local_apic()->InitCpu(&systime);
-  kprintf("done\n");
+  acpi.InitIoApics();
+
+  kprintf("\n\nAll Done. Quitting Now\n");
   // kernel::CpuPlatform::HangSystem();
   // kernel::CpuPlatform::WaitPause();
   asm volatile ("int3");

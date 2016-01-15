@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "x64/page-table-x64.h"
 #include "x64/acpi-x64.h"
 #include "x64/local-apic-x64.h"
 #include "x64/cpu-x64.h"
@@ -77,6 +78,9 @@ struct ApicIoApic {
 
 void AcpiX64::Init()
 {
+  for (u64 start_addr = 0xe0000; start_addr < 0x100000; start_addr += PAGESIZE)
+    GetKernelPageTable().MapPage(start_addr, false, true);
+
   for (u8* p = static_cast<u8*>(PADDR_TO_KPTR(0xe0000));
        p < static_cast<u8*>(PADDR_TO_KPTR(0x1000000)); p += 16) {
     u64 sig = *(u64*)p;
@@ -94,7 +98,7 @@ void AcpiX64::Init()
 
 bool AcpiX64::ParseRSDP(void* p)
 {
-  kprintf("RSDP %lx\n", p);
+  // kprintf("RSDP %lx\n", p);
   u8* pt = static_cast<u8*>(p);
   u8 sum = 0;
   for (u8 i = 0; i < 20; ++i) {
@@ -129,7 +133,7 @@ void AcpiX64::ParseRSDT(AcpiHeader* ptr)
 {
   kassert(ptr);
 
-  kprintf("RSDT, ptr %lx\n", ptr);
+  // kprintf("RSDT, ptr %lx\n", ptr);
 
   u32* p = reinterpret_cast<u32*>(ptr + 1);
   u32* end = reinterpret_cast<u32*>((u8*)ptr + ptr->length);
@@ -142,7 +146,7 @@ void AcpiX64::ParseRSDT(AcpiHeader* ptr)
 
 void AcpiX64::ParseDT(AcpiHeader* ptr)
 {
-  kprintf("DT %lx\n", ptr);
+  // kprintf("DT %lx\n", ptr);
   kassert(ptr);
   u32 signature = ptr->signature;
   char signature_str[5];
@@ -164,7 +168,7 @@ void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
   kassert(header);
   kassert(header->localApicAddr);
 
-  kprintf("localApicAddr %lx\n", header->localApicAddr);
+  // kprintf("localApicAddr %lx\n", header->localApicAddr);
   void* local_apic_address = reinterpret_cast<void*>(
     PADDR_TO_KPTR(header->localApicAddr));
 
@@ -205,7 +209,7 @@ void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
 
     p += length;
   }
-  kprintf("number of cores %d\n", cpu_count_);
+  kprintf("Number of cores detected %d\n", cpu_count_);
 }
 
 void AcpiX64::BootSmp()

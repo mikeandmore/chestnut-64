@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "x64/page-table-x64.h"
 #include "x64/local-apic-x64.h"
 #include "x64/cpu-x64.h"
 #include "x64/io-x64.h"
@@ -24,7 +25,6 @@ LocalApicX64::LocalApicX64(void* local_apic_addr)
     bus_freq(0)
 {
   kprintf("LocalApic addr 0x%lx\n", local_apic_address);
-  kassert(local_apic_address);
 }
 
 void LocalApicX64::CpuSetAPICBase(uintptr_t apic)
@@ -43,12 +43,11 @@ uintptr_t LocalApicX64::CpuGetAPICBase() {
 
 void LocalApicX64::InitCpu(KvmSystemTime *systime)
 {
+  GetKernelPageTable().MapPage(KPTR_TO_PADDR(local_apic_address), false, true);
   CpuSetAPICBase(CpuGetAPICBase());
 
-  kprintf("setting apic base done.\n");
   // Clear task priority to enable all interrupts
   registers.Write(LocalApicRegister::TASK_PRIORITY, 0);
-  kprintf("setting task priority done\n");
   // Set masks
   registers.Write(LocalApicRegister::LINT0, 1 << 16);
   registers.Write(LocalApicRegister::LINT1, 1 << 16);

@@ -10,6 +10,8 @@ namespace kernel {
 static const u32 kKvmClockMSR = 0x4b564d00;
 static const u32 kKvmSystemTimeMSR = 0x4b564d01;
 
+static const u8 kTscStableBit = (1 << 0);
+
 KvmWallClock::KvmWallClock()
 {
   memset(&info, 0, sizeof(KvmWallClockInfo));
@@ -20,6 +22,12 @@ KvmSystemTime::KvmSystemTime()
   : last_boot_time(0)
 {
   memset(&time_info, 0, sizeof(KvmSystemTime));
+  // When KVM is not enabled (usually when we need to debug our shit), we still
+  // want to time to at least move forward.
+  // This is possible, since RDTSC would still work
+  time_info.tsc_shift = -1;
+  time_info.tsc_to_sys_mul = 0x804efb06;
+  time_info.flags = kTscStableBit;
   CpuPlatform::SetMSR(kKvmSystemTimeMSR, CpuMSRValue(KPTR_TO_PADDR(&time_info) | 0x01));
 }
 
@@ -48,6 +56,8 @@ u64 KvmSystemTime::ProcessorNano(u64 time)
     time >>= -time_info.tsc_shift;
   }
 
+  // kprintf("tsc_to_sys 0x%lx\n", time_info.tsc_to_sys_mul);
+
   // we're doing mul in ASM because compiler will generate a call to runtime
   // function for u64 * u64
   //
@@ -59,8 +69,6 @@ u64 KvmSystemTime::ProcessorNano(u64 time)
       : "rdx");
   return time;
 }
-
-static const u8 kTscStableBit = (1 << 0);
 
 u64 KvmSystemTime::BootTime(bool use_hw_stable)
 {

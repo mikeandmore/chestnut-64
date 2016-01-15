@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "x64/ioapic-x64.h"
+#include "x64/page-table-x64.h"
 #include "libc/common.h"
 
 namespace kernel {
@@ -21,11 +22,14 @@ IoApicX64::IoApicX64(u32 id, uintptr_t address, u32 intr_base)
   : id_(id),
     addr(address),
     interrupt_base(intr_base),
-    registers(IoApicRegistersAccessor(addr)) {
+    registers(IoApicRegistersAccessor(addr))
+{
   kprintf("IoApic addr 0x%lx\n", addr);
 }
 
-void IoApicX64::Init() {
+void IoApicX64::Init()
+{
+  GetKernelPageTable().MapPage(KPTR_TO_PADDR(addr), false, true);
   kassert(addr);
   u32 id_reg = (registers.Read(IoApicRegister::ID) >> 24) & 0xF;
 

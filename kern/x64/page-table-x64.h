@@ -16,7 +16,7 @@ protected:
     if (b) entry |= flag;
     else entry &= ~flag;
   }
-  bool get_flag(int bit) {
+  bool get_flag(int bit) const {
     u64 flag = (0x01ULL << bit);
     return (entry & flag) != 0;
   }
@@ -29,7 +29,7 @@ public:
     memset(PADDR_TO_KPTR(entry), 0, PAGESIZE);
     set_present(true);
     set_read_write(true);
-    kprintf("Allocate Page Table entry %lx\n", entry);
+    // kprintf("Allocate Page Table entry %lx\n", entry);
   }
 
   void Clear() {
@@ -42,18 +42,18 @@ public:
   }
 
   void set_present(bool present) { set_flag(present, 0); }
-  bool is_present() { return get_flag(0); }
+  bool is_present() const { return get_flag(0); }
   void set_read_write(bool ro) { set_flag(ro, 1); }
-  bool is_read_write() { return get_flag(1); }
+  bool is_read_write() const { return get_flag(1); }
   void set_kernel_mode(bool kern) { set_flag(kern, 2); }
-  bool is_kernel_mode() { return get_flag(2); }
+  bool is_kernel_mode() const { return get_flag(2); }
   void set_write_through(bool wt) { set_flag(wt, 3); }
-  bool is_write_through() { return get_flag(3); }
+  bool is_write_through() const { return get_flag(3); }
   void set_cache_disabled(bool cd) { set_flag(cd, 4); }
-  bool is_cache_disabled() { return get_flag(4); }
+  bool is_cache_disabled() const { return get_flag(4); }
 
   void set_huge(bool huge) { set_flag(huge, 7); }
-  bool is_huge() { return get_flag(7); }
+  bool is_huge() const { return get_flag(7); }
 
   u64 physical_address() const { return entry & ~(0x01FF); }
 };
@@ -104,6 +104,18 @@ public:
   }
   void Install() {
     asm volatile("mov %0, %%cr3":: "b"(entry));
+  }
+
+  void MapPage(u64 paddr, bool write_through = false, bool cache_disabled = false) {
+    u64 vaddr = KERN_OFFSET + paddr;
+    auto entry = PtEntry(paddr);
+    entry.set_write_through(write_through);
+    entry.set_cache_disabled(cache_disabled);
+
+    this->operator[](vaddr)
+      .AllocateOrPresent()[vaddr]
+      .AllocateOrPresent()[vaddr]
+      .AllocateOrPresent()[vaddr] = entry;
   }
 };
 

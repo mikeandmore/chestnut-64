@@ -5,20 +5,20 @@ namespace kernel {
 
 static PageTableX64 kernel_pgt;
 
-static void MapPagesToPageTable(Pml4Entry kern_entry, u64 start_addr, u64 len, bool skip = true, bool write_through = false)
+static void MapPagesToPageTable(Pml4Entry &kern_entry, u64 start_addr, u64 len, bool skip = true, bool write_through = false)
 {
   for (u64 addr = start_addr; addr < start_addr + len; ) {
     u64 vaddr = KERN_OFFSET + addr;
     u64 paddr = addr;
     // kprintf("MapPages addr %lx\n", addr);
-    if (skip && addr + HUGEPAGESIZE <= start_addr + len) {
+    if (skip && addr % HUGEPAGESIZE == 0 && addr + HUGEPAGESIZE <= start_addr + len) {
       auto entry = PdptEntry(paddr);
       entry.set_huge(true);
       entry.set_write_through(write_through);
       kern_entry
         .AllocateOrPresent()[vaddr] = entry;
       addr += HUGEPAGESIZE;
-    } else if (skip && addr + LARGEPAGESIZE <= start_addr + len) {
+    } else if (skip && addr % LARGEPAGESIZE == 0 && addr + LARGEPAGESIZE <= start_addr + len) {
       auto entry = PdEntry(paddr);
       entry.set_huge(true);
       entry.set_write_through(write_through);
@@ -33,8 +33,29 @@ static void MapPagesToPageTable(Pml4Entry kern_entry, u64 start_addr, u64 len, b
         .AllocateOrPresent()[vaddr]
         .AllocateOrPresent()[vaddr]
         .AllocateOrPresent()[vaddr] = entry;
+
+      // kprintf("DC %lx PRT %lx VA %lx\n",
+      //         kern_entry[vaddr][vaddr][vaddr].physical_address(),
+      //         kern_entry[vaddr][vaddr].physical_address(),
+      //         vaddr);
+
       addr += PAGESIZE;
     }
+  }
+}
+
+static void DumpPageTableFromEntry(const CommonBaseEntry &entry, int level)
+{
+  u64 paddr = entry.physical_address();
+  for (int i = 0; i < level; i++) kprintf(" ");
+  if (!entry.is_present()) kprintf("INVALID ");
+  if (entry.is_huge()) kprintf("HUGE ");
+  kprintf("0x%lx\n", paddr);
+  if (entry.is_huge() || level == 0 || !entry.is_present()) return;
+
+  auto next_level_entries = (CommonBaseEntry *) PADDR_TO_KPTR(paddr);
+  for (int i = 0; i < 512; i++) {
+    DumpPageTableFromEntry(next_level_entries[i], level - 1);
   }
 }
 
@@ -61,7 +82,7 @@ void InitKernelPageTable(struct multiboot_tag_mmap *mm)
       MapPagesToPageTable(kern_entry, entry->addr, entry->len, false, true);
     }
   }
-
+  // DumpPageTableFromEntry(kern_entry, 3);
   // during boot, we mapped the low address => low address in our page table
   // because EIP is at low address. Now our EIP is at kernel .text section,
   // and we never need to jump back again to low address any more. Therefore,
