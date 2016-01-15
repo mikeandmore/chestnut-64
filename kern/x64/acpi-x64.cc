@@ -49,33 +49,11 @@ struct AcpiHeaderMADT {
   u32 flags;
 } __attribute__((packed));
 
-struct AcpiHPETAddress {
-  u8 addressSpaceId;
-  u8 registerBitWidth;
-  u8 registerBitOffset;
-  u8 reserved;
-  u64 address;
-} __attribute__((packed));
-
-struct AcpiHeaderHPET {
-  AcpiHeader header;
-  u8 hardwareRevId;
-  u8 comparatorCount : 5;
-  u8 counterSize : 1;
-  u8 reserved : 1;
-  u8 legacyPlacement : 1;
-  u16 pciVendorId;
-  AcpiHPETAddress address;
-  u8 hpetNumber;
-  u16 minimumTick;
-  u8 pageProtection;
-} __attribute__((packed));
-
 enum class ApicType : u8 {
   LOCAL_APIC = 0,
-    IO_APIC = 1,
-    INTERRUPT_OVERRIDE = 2
-    };
+  IO_APIC = 1,
+  INTERRUPT_OVERRIDE = 2
+};
 
 struct ApicHeader {
   ApicType type;
@@ -151,7 +129,7 @@ void AcpiX64::ParseRSDT(AcpiHeader* ptr)
 {
   kassert(ptr);
 
-  kprintf("parsing RSDT, ptr %lx\n", ptr);
+  kprintf("RSDT, ptr %lx\n", ptr);
 
   u32* p = reinterpret_cast<u32*>(ptr + 1);
   u32* end = reinterpret_cast<u32*>((u8*)ptr + ptr->length);
@@ -167,34 +145,18 @@ void AcpiX64::ParseDT(AcpiHeader* ptr)
   kprintf("DT %lx\n", ptr);
   kassert(ptr);
   u32 signature = ptr->signature;
+  char signature_str[5];
+  memset(signature_str, 0, 5);
 
   switch (signature) {
   case TableUint32("APIC"):
     ParseTableAPIC(reinterpret_cast<AcpiHeaderMADT*>(ptr));
     break;
-  case TableUint32("HPET"):
-    ParseTableHPET(reinterpret_cast<AcpiHeaderHPET*>(ptr));
-    break;
   default:
+    memcpy(signature_str, &signature, 4);
+    kprintf("unknown DT signature %s\n", signature_str);
     break;
   }
-}
-
-void AcpiX64::ParseTableHPET(AcpiHeaderHPET* header)
-{
-  kassert(header);
-  if (nullptr != hpet_) {
-    // Ignore other HPET devices except first one
-    return;
-  }
-
-  kprintf("Hpet %lx\n", header);
-
-  u64 address = header->address.address;
-  kassert(address);
-  kassert(!hpet_);
-  hpet_ = new HpetX64(PADDR_TO_KPTR(address));
-  kassert(hpet_);
 }
 
 void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
@@ -202,8 +164,7 @@ void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
   kassert(header);
   kassert(header->localApicAddr);
 
-  kprintf("Apic %lx\n", header);
-
+  kprintf("localApicAddr %lx\n", header->localApicAddr);
   void* local_apic_address = reinterpret_cast<void*>(
     PADDR_TO_KPTR(header->localApicAddr));
 
@@ -217,10 +178,9 @@ void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
     ApicHeader* header = (ApicHeader*)p;
     ApicType type = header->type;
     u8 length = header->length;
-
     switch (type) {
     case ApicType::LOCAL_APIC: {
-      ApicLocalApic* s = (ApicLocalApic*)p;
+      ApicLocalApic* s = (ApicLocalApic*) p;
       AcpiCPU cpu;
       cpu.cpu_id = s->acpiProcessorId;
       cpu.local_apic_id = s->apicId;
@@ -232,18 +192,20 @@ void AcpiX64::ParseTableAPIC(AcpiHeaderMADT* header)
     case ApicType::IO_APIC: {
       ApicIoApic* s = (ApicIoApic*)p;
       io_apics_.PushBack(new IoApicX64(s->ioApicId,
-                                       (uintptr_t)s->ioApicAddress, s->globalSystemInterrupt));
+                                       (uintptr_t) PADDR_TO_KPTR(s->ioApicAddress), s->globalSystemInterrupt));
     }
       break;
     case ApicType::INTERRUPT_OVERRIDE:
       break;
     default:
       // TODO: parse others
+      kprintf("Unknown ApicHeader type 0x%x\n", type);
       break;
     }
 
     p += length;
   }
+  kprintf("number of cores %d\n", cpu_count_);
 }
 
 void AcpiX64::BootSmp()

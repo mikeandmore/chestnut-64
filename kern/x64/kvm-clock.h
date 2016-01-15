@@ -3,6 +3,7 @@
 #ifndef KVM_CLOCK_H
 #define KVM_CLOCK_H
 
+#include "mm/allocator.h"
 #include "libc/common.h"
 
 namespace kernel {

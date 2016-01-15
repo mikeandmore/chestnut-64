@@ -20,7 +20,7 @@ KvmSystemTime::KvmSystemTime()
   : last_boot_time(0)
 {
   memset(&time_info, 0, sizeof(KvmSystemTime));
-  CpuPlatform::SetMSR(kKvmSystemTimeMSR, CpuMSRValue(KPTR_TO_PADDR(&time_info)));
+  CpuPlatform::SetMSR(kKvmSystemTimeMSR, CpuMSRValue(KPTR_TO_PADDR(&time_info) | 0x01));
 }
 
 u64 KvmWallClock::BootClock()
@@ -35,7 +35,7 @@ u64 KvmWallClock::BootClock()
     res += info.nsec;
     soft_barrier();
     v2 = info.version;
-  } while (v1 != v2);
+  } while ((info.version & 1) || v1 != v2);
 
   return res;
 }
@@ -45,7 +45,7 @@ u64 KvmSystemTime::ProcessorNano(u64 time)
   if (time_info.tsc_shift > 0) {
     time <<= time_info.tsc_shift;
   } else if (time_info.tsc_shift < 0) {
-    time >>= time_info.tsc_shift;
+    time >>= -time_info.tsc_shift;
   }
 
   // we're doing mul in ASM because compiler will generate a call to runtime
@@ -53,7 +53,6 @@ u64 KvmSystemTime::ProcessorNano(u64 time)
   //
   // copied from osv.
   // -Mike
-
   asm("mulq %1; shrd $32, %%rdx, %0"
       : "+a"(time)
       : "rm"((u64) time_info.tsc_to_sys_mul)
@@ -70,14 +69,13 @@ u64 KvmSystemTime::BootTime(bool use_hw_stable)
   u64 time;
   do {
     v1 = time_info.version;
-    soft_barrier();
-    // TODO: there is a lfence() instruction in osv's source code, why?
+    lfence_barrier();
     time = time_info.sys_time
       + ProcessorNano(CpuPlatform::ReadTimeStamp() - time_info.tsc_ts);
     flags = time_info.flags;
     soft_barrier();
     v2 = time_info.version;
-  } while ((v1 & 1) || v1 != v2); // WTF? why v1 & 1?
+  } while ((time_info.version & 0x01) || v1 != v2);
 
   if (use_hw_stable && (flags & kTscStableBit) != 0) {
     return time;
@@ -97,7 +95,5 @@ u64 KvmSystemTime::BootTime(bool use_hw_stable)
 
   return time;
 }
-
-
 
 }

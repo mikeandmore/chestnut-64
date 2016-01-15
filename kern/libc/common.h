@@ -43,6 +43,11 @@ static inline void soft_barrier()
   asm volatile("" : : : "memory");
 }
 
+static inline void lfence_barrier()
+{
+  asm volatile("lfence" : : : "memory");
+}
+
 void kprintf(const char *fmt, ...);
 
 #define panic(fmt, ...)                         \

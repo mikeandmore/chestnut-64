@@ -2,7 +2,9 @@
 #define PAGE_TABLE_X64_H
 
 #include "libc/common.h"
+#include "libc/string.h"
 #include "mm/allocator.h"
+#include "multiboot2.h"
 
 namespace kernel {
 
@@ -24,7 +26,10 @@ public:
 
   void Allocate() {
     entry = GlobalInstance<MemPages>().AllocPage()->physical_address();
+    memset(PADDR_TO_KPTR(entry), 0, PAGESIZE);
     set_present(true);
+    set_read_write(true);
+    kprintf("Allocate Page Table entry %lx\n", entry);
   }
 
   void Clear() {
@@ -33,12 +38,13 @@ public:
 
   CommonBaseEntry(u64 paddr) : entry(paddr) {
     set_present(true);
+    set_read_write(true);
   }
 
   void set_present(bool present) { set_flag(present, 0); }
   bool is_present() { return get_flag(0); }
-  void set_read_only(bool ro) { set_flag(ro, 1); }
-  bool is_read_only() { return get_flag(1); }
+  void set_read_write(bool ro) { set_flag(ro, 1); }
+  bool is_read_write() { return get_flag(1); }
   void set_kernel_mode(bool kern) { set_flag(kern, 2); }
   bool is_kernel_mode() { return get_flag(2); }
   void set_write_through(bool wt) { set_flag(wt, 3); }
@@ -57,6 +63,11 @@ class CommonEntry : public CommonBaseEntry {
 public:
   CommonEntry() : CommonBaseEntry() {}
   CommonEntry(u64 paddr) : CommonBaseEntry(paddr) {}
+
+  CommonEntry<Level> &AllocateOrPresent() {
+    if (!is_present()) Allocate();
+    return *this;
+  }
 
   CommonEntry<Level - 1> &operator[](u64 vaddr) {
     if (Level == 1 && is_huge()) {
@@ -102,7 +113,7 @@ static_assert(sizeof(CommonEntry<4>) == 8
               && sizeof(PdEntry) == 8
               && sizeof(PtEntry) == 8, "Entry should be 8 bytes");
 
-void InitKernelPageTable();
+void InitKernelPageTable(struct multiboot_tag_mmap *boot_mem_map);
 PageTableX64 &GetKernelPageTable();
 
 }

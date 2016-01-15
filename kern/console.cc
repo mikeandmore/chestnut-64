@@ -20,7 +20,7 @@ Console::Console()
 void Console::putchar(char ch)
 {
   GlobalInstance<SerialPortX64>().WriteByte(ch);
-  return;
+
   if (x >= Terminal::kVGAWidth) {
     x = 0;
     y += 1;

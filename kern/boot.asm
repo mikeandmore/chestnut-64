@@ -62,7 +62,7 @@ FlagsTagEnd:
 align 8
 
 FrmBufTag:
-        dw 5
+        dw 3
         dw 0
         dd FrmBufTagEnd - FrmBufTag
         dd 80
@@ -82,24 +82,9 @@ HdrEnd:
 [section .boot]
 [extern _boot_stack]
 _boot:
-        cmp eax, 0x36d76289  ; if this matches, we're good
+        cmp eax, 0x36d76289     ; check the magic returned by the bootloader
         jne $
-        mov ecx, ebx         ; save a copy in case we need it later
-        mov edx, [ebx]       ; size of multiboot structure
-        add edx, ebx         ; maximum address for multiboot structure
-        add ebx, 8           ; total_size and reserved are both u32
-.find_mem_map:
-        cmp ebx, edx         ; if equal, we don't know how much memory
-   	jge $
-	cmp DWORD [ebx], 6   ; check if we've found the memory map
-	je .found_mem_map
-	mov eax, [ebx + 4]
-	add eax, 7
-	and eax, ~7
-	add ebx, eax
-	jmp .find_mem_map
-.found_mem_map:         ; yay, memory map found :)
-        mov [MemMap], ebx    ; found memory map, so store location for parsing
+        mov [MBI], ebx       ; save the pointer
 
 .load_gdt1:
         lgdt [GDT32Pointer]
@@ -135,7 +120,7 @@ use64
 
 	; mov [gs:0x30], dword 0
 
-        mov rax, MemMap + 0xFFFFFF0000000000
+        mov rax, MBI + 0xFFFFFF0000000000
 	mov rdi, [rax]
 
         mov rax, kernel_main
@@ -246,5 +231,5 @@ GDT64VPointer:
         dw GDT64.EndGDT64 - GDT64 - 1
         dq GDT64 + 0xFFFFFF0000000000
 
-MemMap:
+MBI:
         dd 0

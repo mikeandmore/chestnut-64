@@ -10,36 +10,76 @@
 #include "x64/io-x64.h"
 #include "x64/cpu-x64.h"
 #include "x64/acpi-x64.h"
+#include "x64/local-apic-x64.h"
 #include "x64/page-table-x64.h"
+#include "x64/kvm-clock.h"
 
-__link void kernel_main(struct multiboot_tag_mmap *boot_mem_map)
+struct MultibootInfo {
+  struct multiboot_tag_mmap *boot_mem_map;
+  struct multiboot_tag_vbe *boot_vbe;
+  struct multiboot_tag_framebuffer *boot_framebuf;
+};
+
+MultibootInfo ParseMultibootInfo(u8 *mbi)
+{
+  MultibootInfo info;
+  memset(&info, 0, sizeof(MultibootInfo));
+
+  int info_size = *(int *) mbi;
+  u8 *tag_ptr = mbi + 8;
+
+  while (tag_ptr < mbi + info_size) {
+    auto tag = (struct multiboot_tag *) tag_ptr;
+    kprintf("Found MB tag type %d %d\n", tag->type, tag->size);
+    if (tag->type == MULTIBOOT_TAG_TYPE_MMAP) {
+      info.boot_mem_map = (struct multiboot_tag_mmap *) tag;
+    } else if (tag->type == MULTIBOOT_TAG_TYPE_VBE) {
+      info.boot_vbe = (struct multiboot_tag_vbe *) tag;
+    } else if (tag->type == MULTIBOOT_TAG_TYPE_FRAMEBUFFER) {
+      info.boot_framebuf = (struct multiboot_tag_framebuffer *) tag;
+      kprintf("addr 0x%x pitch %d %dx%d\n",
+              info.boot_framebuf->common.framebuffer_addr,
+              info.boot_framebuf->common.framebuffer_pitch,
+              info.boot_framebuf->common.framebuffer_width,
+              info.boot_framebuf->common.framebuffer_height);
+    }
+    tag_ptr += (tag->size + 0x07) & (~0x07);
+  }
+  return info;
+}
+
+__link void kernel_main(u8 *mbi)
 {
   InitializeGlobal<kernel::SerialPortX64>();
   InitializeGlobal<kernel::Terminal, kernel::Console, kernel::MemPages>();
+  auto info = ParseMultibootInfo(mbi);
 
   kprintf("Chestnut-64 Booting...\n");
-  GlobalInstance<kernel::MemPages>().Init(boot_mem_map);
+  GlobalInstance<kernel::MemPages>().Init(info.boot_mem_map);
   kernel::InitSlab();
 
-  kernel::InitKernelPageTable();
-  kprintf("testing...\n");
+  kernel::InitKernelPageTable(info.boot_mem_map);
 
-  for (u64 t = KERN_OFFSET;
-       t < KERN_OFFSET + GlobalInstance<kernel::MemPages>().max_physical_addr();
-       t += HUGEPAGESIZE) {
-    kprintf("huge page paddr %lx ->%lx\n", t, kernel::GetKernelPageTable()[t][t].physical_address());
-  }
+  kernel::KvmWallClock clk;
+  kernel::KvmSystemTime systime;
+
+  kprintf("boot wall clock %lu, systime %lu\n", clk.BootClock(),
+          systime.BootTime());
 
   Vector<int> vec;
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 1000; i++) {
     vec.PushBack(move(i));
   }
+  kernel::CpuPlatform::WaitPause();
 
+  kprintf("systime %lu\n", systime.BootTime());
 
   // kprintf("Booting From Cpu %d...\n", kernel::CpuPlatform::id());
-  // kernel::AcpiX64 acpi;
-  // kprintf("ACPI Initialized\n");
-
-  kernel::CpuPlatform::HangSystem();
-  kernel::CpuPlatform::WaitPause();
+  kernel::AcpiX64 acpi;
+  kprintf("ACPI Initialized\n");
+  acpi.local_apic()->InitCpu(&systime);
+  kprintf("done\n");
+  // kernel::CpuPlatform::HangSystem();
+  // kernel::CpuPlatform::WaitPause();
+  asm volatile ("int3");
 }

@@ -21,7 +21,9 @@ IoApicX64::IoApicX64(u32 id, uintptr_t address, u32 intr_base)
   : id_(id),
     addr(address),
     interrupt_base(intr_base),
-    registers(IoApicRegistersAccessor(addr)) {}
+    registers(IoApicRegistersAccessor(addr)) {
+  kprintf("IoApic addr 0x%lx\n", addr);
+}
 
 void IoApicX64::Init() {
   kassert(addr);

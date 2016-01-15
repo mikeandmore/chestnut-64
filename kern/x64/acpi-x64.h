@@ -19,13 +19,11 @@
 #include "libc/vector.h"
 #include "x64/cpu-x64.h"
 #include "x64/ioapic-x64.h"
-#include "x64/hpet-x64.h"
 
 namespace kernel {
 
 struct AcpiHeader;
 struct AcpiHeaderMADT;
-struct AcpiHeaderHPET;
 class LocalApicX64;
 
 struct AcpiCPU {
@@ -37,16 +35,9 @@ struct AcpiCPU {
 class AcpiX64 {
 public:
   AcpiX64()
-    : local_apic_(nullptr), local_apic_address_(nullptr), hpet_(nullptr),
-      cpu_count_(0) {
+    : local_apic_(nullptr), local_apic_address_(nullptr), cpu_count_(0) {
     Init();
     kassert(local_apic_);
-
-    if (nullptr == hpet_) {
-      panic("Unable to find HPET device.");
-    }
-
-    kassert(hpet_);
   }
 
   AcpiX64(const AcpiX64 &rhs) = delete;
@@ -54,7 +45,6 @@ public:
   LocalApicX64* local_apic() const { return local_apic_; }
   void* local_apic_address() const { return local_apic_address_; }
   u32 cpus_count() const { return cpu_count_; }
-  HpetX64 *timer() { return hpet_; }
 
   void InitIoApics();
   void BootSmp();
@@ -62,7 +52,6 @@ public:
 private:
   LocalApicX64* local_apic_;
   void* local_apic_address_;
-  HpetX64* hpet_;
   Vector<AcpiCPU> cpus_;
   Vector<IoApicX64*> io_apics_;
   u32 cpu_count_;
@@ -72,7 +61,6 @@ private:
   void ParseRSDT(AcpiHeader* ptr);
   void ParseDT(AcpiHeader* ptr);
   void ParseTableAPIC(AcpiHeaderMADT* header);
-  void ParseTableHPET(AcpiHeaderHPET* header);
 };
 
 }

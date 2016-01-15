@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "libc/common.h"
-#include "x64/hpet-x64.h"
+#include "x64/kvm-clock.h"
 
 namespace kernel {
 
@@ -111,12 +111,14 @@ public:
     kassert(local_apic_base);
   }
 
-  inline u32 Read(LocalApicRegister reg) {
+  u32 Read(LocalApicRegister reg) {
     return *(volatile u32*)(local_apic_base + static_cast<u32>(reg));
   }
 
-  inline void Write(LocalApicRegister reg, u32 value) {
+  void Write(LocalApicRegister reg, u32 value) {
+    kprintf("writing to %lx\n", (local_apic_base + static_cast<u32>(reg)));
     *(volatile u32*)(local_apic_base + static_cast<u32>(reg)) = value;
+    kprintf("value %u\n", value);
   }
 
   inline void InterruptCommand(LocalApicInterruptCommand command) {
@@ -185,7 +187,7 @@ public:
   void CpuSetAPICBase(uintptr_t apic);
   uintptr_t CpuGetAPICBase();
 
-  void InitCpu(HpetX64 *hpet);
+  void InitCpu(KvmSystemTime *systime);
 private:
   static const int kApicBaseMSR = 0x1b;
   static const int kApicBaseMSREnable = 0x800;
