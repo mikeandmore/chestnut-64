@@ -5,7 +5,7 @@ project(chestnut-64)
 set(CMAKE_C_COMPILER "clang")
 set(CMAKE_CXX_COMPILER "clang++")
 
-set(CMAKE_C_FLAGS "-ffreestanding -fno-builtin -nostdlib -nostdinc -mno-mmx -mno-sse -mcmodel=large -target x86_64-unknown-linux-gnu")
+set(CMAKE_C_FLAGS "-ffreestanding -fno-builtin -nostdlib -nostdinc -mcmodel=large -target x86_64-unknown-linux-gnu")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++11 -fno-exceptions -fno-rtti")
 set(CMAKE_CXX_LINK_EXECUTABLE "ld -T ${PROJECT_SOURCE_DIR}/linker.ld -nodefaultlibs -melf_x86_64 -z max-page-size=0x1000 <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
 

@@ -118,6 +118,24 @@ use64
 	mov rax, GDT64VPointer + 0xFFFFFF0000000000
         lgdt [rax]
 
+	mov rax, cr0
+	bts rax, 1		; Set Monitor co-processor (Bit 1)
+	btr rax, 2		; Clear Emulation (Bit 2)
+	mov cr0, rax
+
+	;;  Enable SSE
+	mov rax, cr4
+	bts rax, 9		; FXSAVE and FXSTOR instructions (Bit 9)
+	bts rax, 10		; SIMD Floating-Point Exceptions (Bit 10)
+	mov cr4, rax
+
+	fldcw [SSEControl] ; writes 0x37f into the control word: the value written by F(N)INIT
+	fldcw [SSEControl + 2] ; writes 0x37e, the default with invalid operand exceptions enabled
+	fldcw [SSEControl + 4] ; writes 0x37a, both division by zero and invalid operands cause exceptions.
+
+	;;  Enable Math Co-processor
+	finit
+
 	; mov [gs:0x30], dword 0
 
         mov rax, MBI + 0xFFFFFF0000000000
@@ -230,6 +248,12 @@ GDT64Pointer:
 GDT64VPointer:
         dw GDT64.EndGDT64 - GDT64 - 1
         dq GDT64 + 0xFFFFFF0000000000
+
+
+SSEControl:
+        dw 0x037F
+        dw 0x037E
+        dw 0x037A
 
 MBI:
         dd 0
