@@ -84,12 +84,12 @@ T&& move(T& o)
 // getting global variable
 // each module use specialization to export global variable
 template <typename T>
-T& GlobalInstance();
+T& Global();
 
 template <typename T>
 void InitializeGlobal()
 {
-  T& ins = GlobalInstance<T>();
+  T& ins = Global<T>();
   new(&ins) T();
 }
 

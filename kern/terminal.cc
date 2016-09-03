@@ -59,7 +59,7 @@ void Terminal::DrawString(const char *str)
 static kernel::Terminal term;
 
 template <>
-kernel::Terminal &GlobalInstance()
+kernel::Terminal &Global()
 {
   return term;
 }

@@ -2,31 +2,23 @@
 #include "libc/common.h"
 #include "libc/stdarg.h"
 #include "libc/string.h"
-
-#include "x64/io-x64.h"
+#include "io-ports.h"
 
 namespace kernel {
 
-Console::Console()
-  : x(0), y(0)
+VGABuffer::VGABuffer()
+  : ConsoleSource(), x(0), y(0)
 {
-  for (int i = 0; i < Terminal::kVGAHeight; i++) {
-    for (int j = 0; j < Terminal::kVGAWidth; j++) {
-      vga_buffer[i][j] = 0;
-    }
-  }
+  memset(vga_buffer, 0, Terminal::kVGAHeight * Terminal::kVGAWidth);
 }
 
-void Console::putchar(char ch)
+void VGABuffer::WriteByte(char ch)
 {
-  GlobalInstance<SerialPortX64>().WriteByte(ch);
-  return;
   if (x >= Terminal::kVGAWidth) {
     x = 0;
     y += 1;
   }
   if (y >= Terminal::kVGAHeight) {
-    //copy the screen and move up one line...
     for(int i = 0; i < Terminal::kVGAHeight - 1; i++ ) {
       for (int j = 0; j < Terminal::kVGAWidth; j++) {
         vga_buffer[i][j] = vga_buffer[i + 1][j];
@@ -35,10 +27,9 @@ void Console::putchar(char ch)
     for (int j = 0; j < Terminal::kVGAWidth; j++) {
       vga_buffer[Terminal::kVGAHeight - 1][j] = 0;
     }
-
     for (int i = 0; i < Terminal::kVGAHeight; i++) {
       for (int j = 0; j < Terminal::kVGAWidth; j++) {
-        GlobalInstance<Terminal>().DrawChar(vga_buffer[i][j], j, i);
+        Global<Terminal>().DrawChar(vga_buffer[i][j], j, i);
       }
     }
     //end of move the screen one line up
@@ -49,9 +40,27 @@ void Console::putchar(char ch)
     y++;
     return;
   }
-  GlobalInstance<Terminal>().DrawChar(ch, x, y);
+  Global<Terminal>().DrawChar(ch, x, y);
   vga_buffer[y][x] = ch;
   x += 1;
+}
+
+SerialPort::SerialPort(int p)
+  : ConsoleSource()
+{
+  port = p;
+  IoPorts::OutB(port + 1, 0x00);    // Disable all interrupts
+  IoPorts::OutB(port + 3, 0x80);    // Enable DLAB (set baud rate divisor)
+  IoPorts::OutB(port + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
+  IoPorts::OutB(port + 1, 0x00);    //			(hi byte)
+  IoPorts::OutB(port + 3, 0x03);    // 8 bits, no parity, one stop bit
+  IoPorts::OutB(port + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
+  IoPorts::OutB(port + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+}
+
+Console::Console()
+{
+  sources = nullptr;
 }
 
 void Console::vprintf(const char *fmt, va_list ap)
@@ -63,7 +72,7 @@ void Console::vprintf(const char *fmt, va_list ap)
 
   while ((c = *fmt++) != '\0') {
     if (c != '%') {
-      putchar(c);
+      WriteByte(c);
       continue;
     }
     l = 0;
@@ -74,11 +83,11 @@ void Console::vprintf(const char *fmt, va_list ap)
       l++;
       goto nextfmt;
     case 'c':
-      putchar(va_arg(ap, int));
+      WriteByte(va_arg(ap, int));
       break;
     case 's':
       for (s = va_arg(ap, char *); *s != '\0'; s++)
-        putchar(*s);
+        WriteByte(*s);
       break;
     case 'd':	/* A lie, always prints unsigned */
     case 'u':
@@ -105,7 +114,7 @@ void Console::vprintf(const char *fmt, va_list ap)
         while (u >>= 4);
       }
       while (--s >= buf)
-        putchar(*s);
+        WriteByte(*s);
       break;
     }
   }
@@ -124,7 +133,7 @@ void Console::printf(const char *fmt, ...)
 static kernel::Console def_console;
 
 template <>
-kernel::Console &GlobalInstance()
+kernel::Console &Global()
 {
   return def_console;
 }

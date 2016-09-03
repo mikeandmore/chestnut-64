@@ -174,7 +174,7 @@ void MetaSlab::Free(int obj_idx)
 
 MetaSlab *MetaSlab::AllocSlab(int obj_size)
 {
-  auto &mem_pages = GlobalInstance<MemPages>();
+  auto &mem_pages = Global<MemPages>();
   Page *pg = mem_pages.AllocPage();
   MetaSlab *slab = (MetaSlab *) PADDR_TO_KPTR(pg->physical_address());
   pg->slab_ptr = slab;
@@ -184,7 +184,7 @@ MetaSlab *MetaSlab::AllocSlab(int obj_size)
 
 void MetaSlab::FreeSlab(MetaSlab *slab)
 {
-  auto &mem_pages = GlobalInstance<MemPages>();
+  auto &mem_pages = Global<MemPages>();
   Page *pg = mem_pages.page(KPTR_TO_PADDR(slab));
   mem_pages.FreePage(pg);
 }
@@ -239,7 +239,7 @@ public:
   }
 
   virtual void Free(void *ptr) {
-    auto &mem_pages = GlobalInstance<MemPages>();
+    auto &mem_pages = Global<MemPages>();
     // use the struct page to find its slab
     paddr addr = KPTR_TO_PADDR(ptr);
     Page *pg = mem_pages.page(addr);
@@ -277,7 +277,7 @@ static MemCache<FreeListSlab, 2048> chunk2048_cache;
 
 BaseSlab *BaseSlab::AllocSlab(int obj_size)
 {
-  auto &mem_pages = GlobalInstance<MemPages>();
+  auto &mem_pages = Global<MemPages>();
   BaseSlab *slab = (BaseSlab *) meta_slab_cache.Allocate();
   Page *pg = slab->data_page = mem_pages.AllocPage();
   pg->slab_ptr = slab;
@@ -334,7 +334,7 @@ void *Alloc(int obj_size)
 {
   if (obj_size > 2048) {
     int nr_page = (obj_size - 1) / PAGESIZE + 1;
-    auto pg = GlobalInstance<MemPages>().AllocPages(nr_page);
+    auto pg = Global<MemPages>().AllocPages(nr_page);
     pg->slab_obj_size = nr_page * PAGESIZE;
     return PADDR_TO_KPTR(pg->physical_address());
   }
@@ -346,7 +346,7 @@ void *Alloc(int obj_size)
 void Free(void *ptr)
 {
   if (ptr == nullptr) return;
-  auto &mem_page = GlobalInstance<MemPages>();
+  auto &mem_page = Global<MemPages>();
   paddr addr = KPTR_TO_PADDR(ptr);
   Page *pg = mem_page.page(addr);
   // GlobalInstance<Console>().printf("page_size = %d\n", pg->slab_obj_size);

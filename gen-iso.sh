@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 KERN_IMG=$1
 SOURCE_DIR=`dirname $0`

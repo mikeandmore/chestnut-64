@@ -29,8 +29,8 @@ public:
   u64 max_page() { return stat.max_pg; }
 
   void PrintStat() {
-    GlobalInstance<Console>().printf("allocated: %ld pg %ld max_pag %ld\n",
-                                     stat.allocated, stat.slab_pg, stat.max_pg);
+    Global<Console>().printf("allocated: %ld pg %ld max_pag %ld\n",
+                             stat.allocated, stat.slab_pg, stat.max_pg);
   }
 };
 

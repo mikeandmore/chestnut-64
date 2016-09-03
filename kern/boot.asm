@@ -5,7 +5,7 @@ use32
 [global GDT64Pointer]
 [global GDT64VPointer]
 
-[extern kernel_main]
+[extern KernelMain]
 
 [section .mbhdr]
 [extern _load_start]
@@ -96,7 +96,7 @@ _boot:
 	mov ss, ax
 	mov esp, _boot_stack
 
-	call setup_paging_and_long_mode
+	call SetupPagingAndLongMode
 
 	; mov eax, Gdtr2
 	lgdt [GDT64Pointer]
@@ -141,7 +141,7 @@ use64
         mov rax, MBI + 0xFFFFFF0000000000
 	mov rdi, [rax]
 
-        mov rax, kernel_main
+        mov rax, KernelMain
 	call rax
 
 use32
@@ -149,7 +149,7 @@ use32
 [extern Pdpt]
 [extern Pd]
 
-setup_paging_and_long_mode:
+SetupPagingAndLongMode:
    	mov eax, Pdpt
 	or eax, 1
 
@@ -159,19 +159,30 @@ setup_paging_and_long_mode:
         mov dword [Pml4 + 0xFF0], eax
         mov dword [Pml4 + 0xFF4], 0
 
-        mov dword [Pdpt], 0x0083
+        ;; mov dword [Pdpt], 0x00000083
+        ;; mov dword [Pdpt + 0x04], 0
+
+	mov eax, Pd
+	or eax, 1
+
+	mov dword [Pdpt], eax
         mov dword [Pdpt + 0x04], 0
 
-	;; mov eax, Pd
-	;; or eax, 1
-	;; mov [Pdpt], eax
-	;; mov [Pdpt + 0xFF0], eax
+	mov dword [Pdpt + 0xFF0], eax
+        mov dword [Pdpt + 0xFF4], 0
 
         ;; kernel can only do 8M direct access of physical memory
-	;; mov dword [Pd], 0x000083
-	;; mov dword [Pd + 8], 0x200083
-	;; mov dword [Pd + 16], 0x400083
-	;; mov dword [Pd + 24], 0x600083
+	mov dword [Pd], 0x000083
+        mov dword [Pd + 0x04], 0
+
+	mov dword [Pd + 0x08], 0x200083
+        mov dword [Pd + 0x0c], 0
+
+	mov dword [Pd + 0x10], 0x400083
+        mov dword [Pd + 0x14], 0
+
+	mov dword [Pd + 0x18], 0x600083
+        mov dword [Pd + 0x1c], 0
 
 	mov eax, Pml4
 	mov cr3, eax

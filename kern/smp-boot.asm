@@ -4,7 +4,7 @@
 [global _smp_start]
 [global _smp_boot_code_end]
 [extern Pml4]
-[extern kernel_main]
+[extern KernelMain]
 [extern GDT32Pointer]
 [extern GDT64Pointer]
 [extern GDT64VPointer]
@@ -82,7 +82,7 @@ _smp_start64:
 
         mov rdi, 0
 
-        mov rax, kernel_main
+        mov rax, KernelMain
         call rax
 
         cli
