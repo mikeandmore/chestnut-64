@@ -25,6 +25,9 @@ add_executable(kernel.bin
         kern/console.cc
         kern/page-table.cc
         kern/kvm-clock.cc
+        kern/apic.cc
+        kern/acpi.cc
+        kern/cpu.cc
         kern/mm/allocator.cc
         kern/mm/uslab.cc
         kern/libc/string.c

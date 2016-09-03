@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "cpu.h"
 #include "libc/string.h"
 #include "libc/common.h"
 #include "mm/allocator.h"
@@ -41,13 +42,4 @@ u16 CpuPlatform::ReceiveCpuCounter()
   return _smp_cpu_counter;
 }
 
-}
-
-// export global vars
-static kernel::SerialPortX64 def_serial_port;
-
-template <>
-kernel::SerialPortX64 &GlobalInstance()
-{
-  return def_serial_port;
 }

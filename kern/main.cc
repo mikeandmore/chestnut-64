@@ -6,6 +6,7 @@
 #include "multiboot2.h"
 #include "kvm-clock.h"
 #include "cpu.h"
+#include "acpi.h"
 
 #include "mm/allocator.h"
 #include "mm/uslab.h"
@@ -65,10 +66,11 @@ __link void KernelMain(u64 mbi_paddr)
   kernel::InitSlab();
   kernel::InitKernelPageTable(info.boot_mem_map);
 
-#if 0
-  // kprintf("Booting From Cpu %d...\n", kernel::CpuPlatform::id());
-  kernel::AcpiX64 acpi;
+
+  kprintf("Booting From Cpu %d...\n", kernel::CpuPlatform::id());
+  kernel::Acpi acpi;
   kprintf("ACPI Initialized\n");
+#if 0
   acpi.local_apic()->InitCpu(&systime);
   acpi.InitIoApics();
 #endif
