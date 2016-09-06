@@ -172,8 +172,7 @@ void Acpi::ParseTableAPIC(AcpiHeaderMADT* header)
   kassert(header->localApicAddr);
 
   // kprintf("localApicAddr %lx\n", header->localApicAddr);
-  void* local_apic_address = reinterpret_cast<void*>(
-    PADDR_TO_KPTR(header->localApicAddr));
+  void* local_apic_address = PADDR_TO_KPTR(header->localApicAddr);
 
   local_apic_address_ = local_apic_address;
   local_apic_ = new LocalApic(local_apic_address);
@@ -194,6 +193,8 @@ void Acpi::ParseTableAPIC(AcpiHeaderMADT* header)
       cpu.enabled = (1 == (s->flags & 1));
       cpus_.PushBack(move(cpu));
       ++cpu_count_;
+
+      kprintf("-> Found LocalApic in table id: 0x%lx\n", cpu.local_apic_id);
     }
       break;
     case ApicType::IO_APIC: {

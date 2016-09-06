@@ -23,8 +23,8 @@ typedef unsigned long ulong;
 
 #define NULL 0
 
-#define __no_inline __attribute((noinline))
-#define __no_return __attribute((noreturn))
+#define __no_inline __attribute__((noinline))
+#define __no_return __attribute__((noreturn))
 
 #ifdef __cplusplus
 #define __link extern "C"

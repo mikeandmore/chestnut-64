@@ -53,6 +53,16 @@ public:
     // while (is_transmit_empty() == 0);
     IoPorts::OutB(port, a);
   }
+
+  enum InterruptMode {
+    InterruptDataAvailable = 0,
+    InterruptTransmitterEmpty = 1,
+    InterruptError = 2,
+    InterruptStatusChange = 3
+  };
+
+  void EnableInterrupt(InterruptMode mode);
+  void DisableInterrupt(InterruptMode mode);
 private:
   int port;
 };

@@ -6,6 +6,30 @@
 #include "mm/allocator.h"
 #include "multiboot2.h"
 
+/**
+ * PageDirectory Entry:
+ * [31..PageTable 4k Aligned..12][11..Avail..9][8..G S 0 A D W U R P..0]
+ * G: Global
+ * S: Huge Page?
+ * A: Accessed
+ * D: Cache Disabled
+ * W: Write Through
+ * U: User/Kernel?
+ * R: Read/Write
+ * P: Present
+ *
+ * PageTable Entry:
+ * [31..Physical Page Address..12][11..Avail..9][8..G 0 D A C W U R P..0]
+ * G: Global
+ * D: Dirty
+ * A: Accessed
+ * W: Write Through
+ * U: User/Kernel?
+ * R: Read/Write
+ * P: Present
+ *
+ */
+
 namespace kernel {
 
 class CommonBaseEntry {

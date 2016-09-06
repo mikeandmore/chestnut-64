@@ -204,23 +204,23 @@ public:
 
   inline u32 Read(IoApicRegister reg) const {
     kassert(addr);
-    *(volatile u32*)(addr + static_cast<u8>(IoApicAccessorRegister::IOREGSEL))
-      = static_cast<u32>(reg);
+    *(volatile u32*)(addr + (u8) IoApicAccessorRegister::IOREGSEL)
+      = (u32) reg;
 
-    return *(volatile u32*)(addr + static_cast<u8>(IoApicAccessorRegister::IOWIN));
+    return *(volatile u32*)(addr + (u8) IoApicAccessorRegister::IOWIN);
   }
 
   inline void Write(IoApicRegister reg, u8 reg_offset, u8 value) const {
     kassert(addr);
-    *(volatile u32*)(addr + static_cast<u8>(IoApicAccessorRegister::IOREGSEL))
-      = static_cast<u32>(reg) + reg_offset;
+    *(volatile u32*)(addr + (u8) IoApicAccessorRegister::IOREGSEL)
+      = (u32) reg + reg_offset;
 
-    *(volatile u32*)(addr + static_cast<u8>(IoApicAccessorRegister::IOWIN)) = value;
+    *(volatile u32*)(addr + (u8) IoApicAccessorRegister::IOWIN) = value;
   }
 
   inline void SetEntry(u8 index, u64 data) const {
-    Write(IoApicRegister::REDTBL, index * 2, static_cast<u32>(data));
-    Write(IoApicRegister::REDTBL, index * 2 + 1, static_cast<u32>(data >> 32));
+    Write(IoApicRegister::REDTBL, index * 2, (u32) data);
+    Write(IoApicRegister::REDTBL, index * 2 + 1, (u32) (data >> 32));
   }
 private:
   uintptr_t addr;
@@ -229,13 +229,14 @@ private:
 class IoApic {
 public:
   IoApic(u32 id, uintptr_t address, u32 intr_base);
-
   void Init();
 
   void EnableIrq(u32 first_irq_offset, u32 irq) {
-    kprintf("Enabling IRQ %d %d\n", first_irq_offset, irq);
+    // kprintf("Enabling IRQ %d %d\n", first_irq_offset, irq);
     registers.SetEntry(irq, first_irq_offset + irq + interrupt_base);
   }
+
+  u32 interrupt_base_address() const { return interrupt_base; }
 
 private:
   u32 id_;

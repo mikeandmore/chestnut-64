@@ -1,11 +1,12 @@
 #include "page-table.h"
 #include "mm/allocator.h"
 
-extern long Pd;
-
 namespace kernel {
 
 static PageTable kernel_pgt;
+
+#define HUGEPAGE_SUPPORT 1
+#define LARGEPAGE_SUPPORT 1
 
 static void MapPagesToPageTable(Pml4Entry &kern_entry, u64 start_addr, u64 len, bool skip = true, bool write_through = false)
 {
@@ -13,6 +14,7 @@ static void MapPagesToPageTable(Pml4Entry &kern_entry, u64 start_addr, u64 len, 
     u64 vaddr = KERN_OFFSET + addr;
     u64 paddr = addr;
     // kprintf("MapPages addr %lx\n", addr);
+#ifdef HUGEPAGE_SUPPORT
     if (skip && addr % HUGEPAGESIZE == 0 && addr + HUGEPAGESIZE <= start_addr + len) {
       auto entry = PdptEntry(paddr);
       entry.set_huge(true);
@@ -20,7 +22,12 @@ static void MapPagesToPageTable(Pml4Entry &kern_entry, u64 start_addr, u64 len, 
       kern_entry
         .AllocateOrPresent()[vaddr] = entry;
       addr += HUGEPAGESIZE;
-    } else if (skip && addr % LARGEPAGESIZE == 0 && addr + LARGEPAGESIZE <= start_addr + len) {
+      continue;
+    }
+#endif
+
+#ifdef LARGEPAGE_SUPPORT
+    if (skip && addr % LARGEPAGESIZE == 0 && addr + LARGEPAGESIZE <= start_addr + len) {
       auto entry = PdEntry(paddr);
       entry.set_huge(true);
       entry.set_write_through(write_through);
@@ -28,21 +35,22 @@ static void MapPagesToPageTable(Pml4Entry &kern_entry, u64 start_addr, u64 len, 
         .AllocateOrPresent()[vaddr]
         .AllocateOrPresent()[vaddr] = entry;
       addr += LARGEPAGESIZE;
-    } else {
-      auto entry = PtEntry(paddr);
-      entry.set_write_through(write_through);
-      kern_entry
-        .AllocateOrPresent()[vaddr]
-        .AllocateOrPresent()[vaddr]
-        .AllocateOrPresent()[vaddr] = entry;
-
-      // kprintf("DC %lx PRT %lx VA %lx\n",
-      //         kern_entry[vaddr][vaddr][vaddr].physical_address(),
-      //         kern_entry[vaddr][vaddr].physical_address(),
-      //         vaddr);
-
-      addr += PAGESIZE;
+      continue;
     }
+#endif
+    auto entry = PtEntry(paddr);
+    entry.set_write_through(write_through);
+    kern_entry
+      .AllocateOrPresent()[vaddr]
+      .AllocateOrPresent()[vaddr]
+      .AllocateOrPresent()[vaddr] = entry;
+
+    // kprintf("DC %lx PRT %lx VA %lx\n",
+    //         kern_entry[vaddr][vaddr][vaddr].physical_address(),
+    //         kern_entry[vaddr][vaddr].physical_address(),
+    //         vaddr);
+
+    addr += PAGESIZE;
   }
 }
 
@@ -63,8 +71,6 @@ static void DumpPageTableFromEntry(const CommonBaseEntry &entry, int level)
 
 void InitKernelPageTable(struct multiboot_tag_mmap *mm)
 {
-  new (&kernel_pgt) PageTable();
-
   if (Global<MemPages>().max_physical_addr() > KERN_MAX_MEMORY)
     panic("Cannot support more than 512GB memory!");
 
@@ -76,7 +82,8 @@ void InitKernelPageTable(struct multiboot_tag_mmap *mm)
 
   for (int i = 0; i < nr_entries; i++) {
     auto entry = &mm->entries[i];
-    if (entry->addr % PAGESIZE != 0 || entry->len % PAGESIZE != 0) continue; // unpaged memory
+    // if (entry->addr % PAGESIZE != 0 || entry->len % PAGESIZE != 0) continue; // unpaged memory
+    if (entry->addr % PAGESIZE != 0) continue; // unaligned memory
 
     if (entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
       MapPagesToPageTable(kern_entry, entry->addr, entry->len);
@@ -102,13 +109,18 @@ PageTable &GetKernelPageTable()
 
 void InitBootPageTable()
 {
-  PdEntry *entries = (PdEntry *) Pd;
+  new (&kernel_pgt) PageTable();
+
   u64 base_addr = 0;
+
   for (int i = 0; i < 512; i++, base_addr += (2 << 20)) {
-    entries[i] = PdEntry(base_addr);
-    entries[i].set_huge(true);
-    entries[i].set_present(true);
-    entries[i].set_read_write(true);
+    auto vaddr = KERN_OFFSET + base_addr;
+    auto entry = PdEntry(base_addr);
+    entry.set_huge(true);
+    entry.set_present(true);
+    entry.set_read_write(true);
+
+    kernel_pgt[vaddr][vaddr][vaddr] = entry;
   }
 }
 

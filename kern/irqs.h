@@ -1,39 +1,26 @@
-// Copyright 2014 Runtime.JS project authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+#ifndef IRQS_H
+#define IRQS_H
 
-#pragma once
-#include <kernel/kernel.h>
-#include <kernel/resource.h>
-#include <kernel/engine.h>
+#include "libc/common.h"
 
-#ifdef RUNTIMEJS_PLATFORM_X64
-#include <kernel/x64/irqs-x64.h>
-#else
-#error Platform is not supported
-#endif
+namespace kernel {
 
-namespace rt {
-
-class Irqs {
+class IrqHandler {
 public:
-    Irqs() {
-        irqs_arch_.SetUp();
-    }
-private:
-    IrqsArch irqs_arch_;
-    DELETE_COPY_AND_ASSIGN(Irqs);
+  virtual void Run();
 };
 
+class IrqVector {
+  u64 base_irq_addr;
+public:
+  void Setup(u64 base_addr);
+  static const int kMaxInterrupt = 256;
+private:
+  void InstallHandler(u8 irq_id, void (*func)(void), u8 type = 0x8E);
 
-} // namespace rt
+  IrqHandler *handlers[kMaxInterrupt];
+};
+
+}
+
+#endif /* IRQS_H */

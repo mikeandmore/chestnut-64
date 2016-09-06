@@ -46,6 +46,8 @@ public:
   void* local_apic_address() const { return local_apic_address_; }
   u32 cpus_count() const { return cpu_count_; }
 
+  Vector<IoApic*> &io_apics() { return io_apics_; }
+
   void InitIoApics();
   void BootSmp();
 

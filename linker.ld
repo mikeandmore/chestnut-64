@@ -13,6 +13,7 @@ SECTIONS {
       . = ALIGN(4096);
       *(.smp_boot)
       . = ALIGN(4096);
+      . += 0x1000;
       Pml4 = .;
       . += 0x1000;
       Pdpt = .;

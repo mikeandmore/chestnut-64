@@ -58,6 +58,20 @@ SerialPort::SerialPort(int p)
   IoPorts::OutB(port + 4, 0x0B);    // IRQs enabled, RTS/DSR set
 }
 
+void SerialPort::EnableInterrupt(SerialPort::InterruptMode mode)
+{
+  u8 mask = 1 << ((u8) mode);
+  u8 old = IoPorts::InB(port + 1);
+  IoPorts::OutB(port + 1, old | mask);
+}
+
+void SerialPort::DisableInterrupt(SerialPort::InterruptMode mode)
+{
+  u8 mask = 1 << ((u8) mode);
+  u8 old = IoPorts::InB(port + 1);
+  IoPorts::OutB(port + 1, old & ~mask);
+}
+
 Console::Console()
 {
   sources = nullptr;

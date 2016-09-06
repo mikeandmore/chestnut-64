@@ -7,6 +7,7 @@
 #include "kvm-clock.h"
 #include "cpu.h"
 #include "acpi.h"
+#include "irqs.h"
 
 #include "mm/allocator.h"
 #include "mm/uslab.h"
@@ -66,17 +67,30 @@ __link void KernelMain(u64 mbi_paddr)
   kernel::InitSlab();
   kernel::InitKernelPageTable(info.boot_mem_map);
 
+  kernel::KvmSystemTime systime;
 
   kprintf("Booting From Cpu %d...\n", kernel::CpuPlatform::id());
   kernel::Acpi acpi;
   kprintf("ACPI Initialized\n");
-#if 0
   acpi.local_apic()->InitCpu(&systime);
   acpi.InitIoApics();
-#endif
+
+  u64 irq_vector_base = 0;
+  for (auto io_apic: acpi.io_apics()) {
+    if (irq_vector_base != 0) {
+      kassert(irq_vector_base == io_apic->interrupt_base_address());
+    }
+    irq_vector_base = io_apic->interrupt_base_address();
+  }
+  kprintf("Setting up Irq Vector\n");
+
+  Global<kernel::IrqVector>().Setup(irq_vector_base);
+
+  kernel::CpuPlatform::EnableInterrupts();
+
+  kprintf("Waiting for interrupts\n");
+  kernel::CpuPlatform::Halt();
 
   kprintf("\n\nAll Done. Quitting Now\n");
-  // kernel::CpuPlatform::HangSystem();
-  // kernel::CpuPlatform::WaitPause();
-  asm volatile ("int3");
+  // asm volatile ("int3");
 }

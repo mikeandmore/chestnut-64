@@ -1,178 +1,147 @@
-// Copyright 2014 Runtime.JS project authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+#include "irqs.h"
+#include "mm/allocator.h"
+#include "io-ports.h"
 
-#include <kernel/kernel.h>
-#include <kernel/irqs.h>
-#include <kernel/cpu.h>
-#include <kernel/mem-manager.h>
-#include <kernel/platform.h>
-#include <kernel/engines.h>
-#include <kernel/profiler/profiler.h>
+namespace kernel {
 
-using namespace rt;
+struct IDT {
+  u16 len;
+  u64 addr;
+};
 
-#define EXPORT_EVENT extern "C"
-
-EXPORT_EVENT void exception_DE_event() {
-    RT_ASSERT(!"!Ex_x86_64_DE");
-    Cpu::HangSystem();
 }
 
-EXPORT_EVENT void exception_DB_event() {
-    RT_ASSERT(!"!Ex_x86_64_DB");
-    Cpu::HangSystem();
+extern kernel::IDT IDT64;
+
+namespace kernel {
+
+struct InterruptFrame {
+  u64 rip;
+  u64 cs;
+  u64 eflags;
+  u64 rsp;
+} __attribute__((packed));
+
+void InterruptWrapper()
+{
+  // save context to the stack
+  asm volatile(
+    "push %rdi;"
+    "push %rsi;"
+    "push %rdx;"
+    "push %rcx;"
+    "push %r8;"
+    "push %r9;"
+    "push %rax;"
+    "push %rbx;"
+    "push %r10;"
+    "push %r11;"
+    "push %r12;"
+    "push %r13;"
+    "push %r14;"
+    "push %r15;"
+    "sub $0x200, %rsp;"
+    "fnstenv (%rsp);"
+    "stmxcsr 0x18(%rsp);");
+
+  u64 frame_ptr;
+  asm volatile("movq %%rbp, %0"
+               :: "m" (frame_ptr));
+  InterruptFrame *f = (InterruptFrame *) (frame_ptr + 8);
+  kprintf("frame 0x%lx, $rip 0x%lx, $cs 0x%lx %eflags 0x%lx, $rsp 0x%lx\n", frame_ptr, f->rip,
+          f->cs, f->eflags, f->rsp);
+
+
+
+  // restore context from the stack, we're leaving
+  u64 new_sp = frame_ptr - 512 - 14 * 8;
+  asm volatile("mov %0, %%rsp;":"=m" (new_sp));
+  asm volatile(
+    "fldenv (%rsp);"
+    "ldmxcsr 0x18(%rsp);"
+    "add $0x200, %rsp;"
+    "pop %r15;"
+    "pop %r14;"
+    "pop %r13;"
+    "pop %r12;"
+    "pop %r11;"
+    "pop %r10;"
+    "pop %rbx;"
+    "pop %rax;"
+    "pop %r9;"
+    "pop %r8;"
+    "pop %rcx;"
+    "pop %rdx;"
+    "pop %rsi;"
+    "pop %rdi;");
+
+  asm volatile("leave; iretq");
 }
 
-EXPORT_EVENT void exception_NMI_event() {
-    RT_ASSERT(!"!Ex_x86_64_NMI");
-    Cpu::HangSystem();
+void IrqVector::Setup(u64 base_addr)
+{
+  base_irq_addr = base_addr;
+
+  IoPorts::OutB(0x20, 0x11); // 00010001b, begin PIC 1 initialization
+  IoPorts::OutB(0xA0, 0x11); // 00010001b, begin PIC 2 initialization
+
+  IoPorts::OutB(0x21, 0x20); // IRQ 0-7, interrupts 20h-27h
+  IoPorts::OutB(0xA1, 0x28); // IRQ 8-15, interrupts 28h-2Fh
+
+  IoPorts::OutB(0x21, 0x04);
+  IoPorts::OutB(0xA1, 0x02);
+
+  IoPorts::OutB(0x21, 0x01);
+  IoPorts::OutB(0xA1, 0x01);
+
+  // Mask all PIC interrupts
+  IoPorts::OutB(0x21, 0xFF);
+  IoPorts::OutB(0xA1, 0xFF);
+
+  for (u8 irq_id = 0; irq_id < (u8) 0xFF; irq_id++) {
+    InstallHandler(irq_id, &InterruptWrapper, (u8) 0x8E);
+  }
+
+  void *idt_ptr = PADDR_TO_KPTR(&IDT64);
+
+  // u64 idt_ptr = (u64) &gIDT;
+  asm volatile("mov %%rax, %0; lidt (%%rax)" ::"r" (idt_ptr) : "%rax");
 }
 
-EXPORT_EVENT void exception_BP_event() {
-    RT_ASSERT(!"!Ex_x86_64_BP");
-    Cpu::HangSystem();
+void IrqVector::InstallHandler(u8 irq_id, void (*func)(void), u8 type)
+{
+  u8 *idt_table = (u8 *) base_irq_addr;
+  u8 b[16];
+
+  b[0] = (u64) func & 0x00000000000000FF;
+  b[1] = ((u64) func & 0x000000000000FF00) >> 8;
+  b[2] = 0x08; // CS
+  b[3] = 0;
+  b[4] = 0;
+  b[5] = type;
+  b[6] = ((u64) func & 0x0000000000FF0000) >> 16;
+  b[7] = ((u64) func & 0x00000000FF000000) >> 24;
+
+  b[8] = ((u64) func & 0x000000FF00000000) >> 32;
+  b[9] = ((u64) func & 0x0000FF0000000000) >> 40;
+  b[10] = ((u64) func & 0x00FF000000000000) >> 48;
+  b[11] = ((u64) func & 0xFF00000000000000) >> 56;
+  b[12] = 0;
+  b[13] = 0;
+  b[14] = 0;
+  b[15] = 0;
+
+  for (u64 i = 0; i < 16; i++) {
+    *(u8 *) PADDR_TO_KPTR(idt_table + irq_id * 16 + i) = b[i];
+  }
 }
 
-EXPORT_EVENT void exception_OF_event() {
-    RT_ASSERT(!"!Ex_x86_64_OF");
-    Cpu::HangSystem();
 }
 
-EXPORT_EVENT void exception_BR_event() {
-    RT_ASSERT(!"!Ex_x86_64_BR");
-    Cpu::HangSystem();
+static kernel::IrqVector vec;
+
+template <>
+kernel::IrqVector &Global()
+{
+  return vec;
 }
-
-EXPORT_EVENT void exception_UD_event(uint64_t rip, uint64_t cs) {
-    printf(" >>>> RIP = 0x%x, CS = 0x%x, CPU = %d\n", rip, cs, rt::Cpu::id());
-    RT_ASSERT(!"!Ex_x86_64_UD");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_NM_event() {
-    RT_ASSERT(!"!Ex_x86_64_NM");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_DF_event() {
-    RT_ASSERT(!"!Ex_x86_64_DF");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_TS_event() {
-    RT_ASSERT(!"!Ex_x86_64_TS");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_NP_event() {
-    RT_ASSERT(!"!Ex_x86_64_NP");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_SS_event() {
-    RT_ASSERT(!"!Ex_x86_64_SS");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_GP_event(uint64_t rip, uint64_t cs, uint64_t errcode, uint64_t p1) {
-    printf("[GP+] >>>> RIP = 0x%x, CS = 0x%x, ERRCODE = %d, RAX = 0x%x CPU = %d\n",
-           rip, cs, errcode, p1, rt::Cpu::id());
-}
-
-EXPORT_EVENT void exception_PF_event(void* fault_address, uint64_t error_code) {
-    GLOBAL_mem_manager()->PageFault(fault_address, error_code);
-}
-
-EXPORT_EVENT void exception_MF_event() {
-    RT_ASSERT(!"!Ex_x86_64_MF");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_AC_event() {
-    RT_ASSERT(!"!Ex_x86_64_AC");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_MC_event() {
-    RT_ASSERT(!"!Ex_x86_64_MC");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_XF_event() {
-    RT_ASSERT(!"!Ex_x86_64_XF");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_SX_event() {
-    RT_ASSERT(!"!Ex_x86_64_SX");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void exception_other_event() {
-    RT_ASSERT(!"!Ex_OTHER");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void irq_keyboard_event(uint64_t* rip) {
-    SystemContextDefaultIRQ irq_context {};
-    printf("KBD!\n");
-    RT_ASSERT(GLOBAL_platform());
-
-    // TODO: remove this handler
-    GLOBAL_platform()->HandleIRQ(irq_context, 1);
-}
-
-int net_irq_count = 0;
-
-EXPORT_EVENT void irq_handler_any(uint64_t number) {
-    SystemContextDefaultIRQ irq_context {};
-
-    if (1 != number) {
-        // Log all IRQ except keyboard
-//        printf("IRQ %d, cpu %d\n", number, rt::Cpu::id());
-    }
-
-    RT_ASSERT(number <= 0xff);
-    RT_ASSERT(GLOBAL_platform());
-    GLOBAL_platform()->HandleIRQ(irq_context, number & 0xff);
-}
-
-// TODO: fix this event
-EXPORT_EVENT void irq_timer_event(void* rsp, void* rbp, void* rip) {
-    rt::SystemContextTimerIRQ irq_context {};
-    RT_ASSERT(GLOBAL_engines());
-    GLOBAL_engines()->TimerTick(irq_context);
-
-    RegisterState state;
-    state.rsp = rsp;
-    state.rbp = rbp;
-    state.rip = rip;
-    GLOBAL_platform()->profiler().MakeSample(irq_context, state);
-
-    // TODO: fix hardcoded apic base address
-    LocalApicRegisterAccessor registers((void*)0xfee00000);
-    registers.Write(LocalApicRegister::EOI, 0);
-}
-
-EXPORT_EVENT void irq_other_event() {
-    RT_ASSERT(!"!INT.OTHER");
-    Cpu::HangSystem();
-}
-
-EXPORT_EVENT void gate_context_switch_event() {
-    RT_ASSERT(!"!GT");
-    Cpu::HangSystem();
-}
-
-#undef EXPORT_EVENT

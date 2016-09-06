@@ -4,6 +4,7 @@ use32
 [global GDT32Pointer]
 [global GDT64Pointer]
 [global GDT64VPointer]
+[global IDT64]
 
 [extern KernelMain]
 
@@ -260,6 +261,9 @@ GDT64VPointer:
         dw GDT64.EndGDT64 - GDT64 - 1
         dq GDT64 + 0xFFFFFF0000000000
 
+IDT64:
+        dw 4095
+        dq 0xFFFFFF0000000000
 
 SSEControl:
         dw 0x037F

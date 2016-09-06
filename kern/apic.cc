@@ -1,6 +1,8 @@
 #include "apic.h"
 #include "page-table.h"
 #include "cpu.h"
+#include "io-ports.h"
+#include "irqs.h"
 
 namespace kernel {
 
@@ -104,7 +106,7 @@ IoApic::IoApic(u32 id, uintptr_t address, u32 intr_base)
     interrupt_base(intr_base),
     registers(IoApicRegistersAccessor(addr))
 {
-  kprintf("-> IoApic addr 0x%lx\n", addr);
+  kprintf("-> IoApic addr 0x%lx interrupt_base 0x%lx\n", addr, interrupt_base);
 }
 
 void IoApic::Init()
@@ -123,11 +125,16 @@ void IoApic::Init()
 
   u32 max_interrupts = max_value + 1;
 
+  kassert(max_interrupts < IrqVector::kMaxInterrupt);
+
   const u32 kIntMasked = 1 << 16;
   const u32 kIntTrigger = 1 << 15;
   const u32 kIntActiveLow = 1 << 14;
   const u32 kIntDstLogical = 1 << 11;
   const u32 kIRQOffset = 32;
+
+  // Disable NMI
+  IoPorts::OutB(0x70, IoPorts::InB(0x70) | 0x80);
 
   // Enable all interrupts
   for (u32 i = 0; i < max_interrupts; ++i) {
