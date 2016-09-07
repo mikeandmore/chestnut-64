@@ -1,4 +1,5 @@
 #include "irqs.h"
+#include "acpi.h"
 #include "mm/allocator.h"
 #include "io-ports.h"
 
@@ -22,58 +23,58 @@ struct InterruptFrame {
   u64 rsp;
 } __attribute__((packed));
 
+// We should *never* compile with -fomit-frame-pointer!
 void InterruptWrapper()
 {
   // save context to the stack
-  asm volatile(
-    "push %rdi;"
-    "push %rsi;"
-    "push %rdx;"
-    "push %rcx;"
-    "push %r8;"
-    "push %r9;"
-    "push %rax;"
-    "push %rbx;"
-    "push %r10;"
-    "push %r11;"
-    "push %r12;"
-    "push %r13;"
-    "push %r14;"
-    "push %r15;"
-    "sub $0x200, %rsp;"
-    "fnstenv (%rsp);"
-    "stmxcsr 0x18(%rsp);");
-
   u64 frame_ptr;
-  asm volatile("movq %%rbp, %0"
-               :: "m" (frame_ptr));
+  u64 stack_ptr;
+  asm volatile(
+    "push %%rdi;"
+    "push %%rsi;"
+    "push %%rdx;"
+    "push %%rcx;"
+    "push %%r8;"
+    "push %%r9;"
+    "push %%rax;"
+    "push %%rbx;"
+    "push %%r10;"
+    "push %%r11;"
+    "push %%r12;"
+    "push %%r13;"
+    "push %%r14;"
+    "push %%r15;"
+    "sub $0x200, %%rsp;"
+    "fnstenv (%%rsp);"
+    "stmxcsr 0x18(%%rsp);"
+    "movq %%rbp, %0;"
+    "movq %%rsp, %1;":: "m" (frame_ptr), "m" (stack_ptr));
   InterruptFrame *f = (InterruptFrame *) (frame_ptr + 8);
   kprintf("frame 0x%lx, $rip 0x%lx, $cs 0x%lx %eflags 0x%lx, $rsp 0x%lx\n", frame_ptr, f->rip,
           f->cs, f->eflags, f->rsp);
 
-
+  Global<kernel::Acpi>().local_apic()->EOI();
 
   // restore context from the stack, we're leaving
-  u64 new_sp = frame_ptr - 512 - 14 * 8;
-  asm volatile("mov %0, %%rsp;":"=m" (new_sp));
   asm volatile(
-    "fldenv (%rsp);"
-    "ldmxcsr 0x18(%rsp);"
-    "add $0x200, %rsp;"
-    "pop %r15;"
-    "pop %r14;"
-    "pop %r13;"
-    "pop %r12;"
-    "pop %r11;"
-    "pop %r10;"
-    "pop %rbx;"
-    "pop %rax;"
-    "pop %r9;"
-    "pop %r8;"
-    "pop %rcx;"
-    "pop %rdx;"
-    "pop %rsi;"
-    "pop %rdi;");
+    "mov %0, %%rsp;"
+    "fldenv (%%rsp);"
+    "ldmxcsr 0x18(%%rsp);"
+    "add $0x200, %%rsp;"
+    "pop %%r15;"
+    "pop %%r14;"
+    "pop %%r13;"
+    "pop %%r12;"
+    "pop %%r11;"
+    "pop %%r10;"
+    "pop %%rbx;"
+    "pop %%rax;"
+    "pop %%r9;"
+    "pop %%r8;"
+    "pop %%rcx;"
+    "pop %%rdx;"
+    "pop %%rsi;"
+    "pop %%rdi;": "=m" (stack_ptr));
 
   asm volatile("leave; iretq");
 }

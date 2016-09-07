@@ -254,3 +254,11 @@ void Acpi::InitIoApics()
 }
 
 }
+
+static kernel::Acpi gAcpi;
+
+template <>
+kernel::Acpi &Global()
+{
+  return gAcpi;
+}

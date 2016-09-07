@@ -70,7 +70,9 @@ __link void KernelMain(u64 mbi_paddr)
   kernel::KvmSystemTime systime;
 
   kprintf("Booting From Cpu %d...\n", kernel::CpuPlatform::id());
-  kernel::Acpi acpi;
+  InitializeGlobal<kernel::Acpi>();
+  auto &acpi = Global<kernel::Acpi>();
+
   kprintf("ACPI Initialized\n");
   acpi.local_apic()->InitCpu(&systime);
   acpi.InitIoApics();
@@ -89,7 +91,9 @@ __link void KernelMain(u64 mbi_paddr)
   kernel::CpuPlatform::EnableInterrupts();
 
   kprintf("Waiting for interrupts\n");
-  kernel::CpuPlatform::Halt();
+  while (true) {
+    kernel::CpuPlatform::Halt();
+  }
 
   kprintf("\n\nAll Done. Quitting Now\n");
   // asm volatile ("int3");
