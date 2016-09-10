@@ -7,99 +7,61 @@
 #include "libc/common.h"
 #include "mm/allocator.h"
 
-
 namespace kernel {
 
-enum RegisterIndex {
-	kRegRAX = 0,
-	kRegRBX,
-	kRegRBP,
-	kRegR12,
-	kRegR13,
-	kRegR14,
-	kRegR15,
-	kRegRDI,
+struct Context {
+  u64 rax;
+  u64 rbx;
+  u64 rcx;
+  u64 rdx;
+  u64 rdi;
+  u64 rsi;
+  u64 rbp;
+  u64 rsp;
 
-	kRegRSI,
-	kRegRDX,
-	kRegRCX,
-	kRegR8,
-	kRegR9,
+  u64 r8;
+  u64 r9;
+  u64 r10;
+  u64 r11;
+  u64 r12;
+  u64 r13;
+  u64 r14;
+  u64 r15;
 
-	kRegRIP,
-	kRegRSP,
+  u64 rip;
 
-	kNumReg, // total number of registers
+  u64 fp_state[64];
 };
 
 class Thread
 {
 public:
-	Thread();
-	~Thread();
+  Thread();
+  ~Thread();
 
-	/**
-	 * Questions:
-	 *
-	 * 1. You can't kill another thread. Why? lock, memory consistency
-	 * 2. When the thread routine wants to exit the current thread, you
-	 * cannot destroy the current thread right there. Why? using context and stack
-	 * 3. Therefore, with the two questions above, why there is a Stub()
-	 * method? scheduler needs to know you want to exit
-	 */
+  void Yield();
+  void Sleep(int second);
 
-	void Yield();
+  bool  __no_inline SaveContext();
+  void RestoreContext() __no_return;
 
-	/**
-	 * These two functions are the magic.
-	 *
-	 * SaveContext() will save the state of execution to as if the function
-	 * has returned. As the X86_64 calling convention specified, %RAX holds
-	 * the return value. After calling this function, it returns a true
-	 * (%RAX=1), which means, the scheduler need to suspend this thread
-	 * ASAP.
-	 *
-	 * RestoreContext() could restore the state SaveContext() saved, and
-	 * plus, change the %RAX to zero. Since SaveContext() saves the state
-	 * as if it was fininshed, we will jump back to the state it has just
-	 * returned. However, this time, with %RAX=0, which means, the thread
-	 * should continue to execute.
-	 *
-	 * Combine these two method, we could use the following pattern to yield
-	 * a thread:
-	 *
-	 * if (SaveContext()) SchedulerStopMe();
-	 *
-	 */
+  virtual void Run() = 0;
 
-	void Sleep(int second);
-	bool  __no_inline SaveContext();
-	void RestoreContext() __no_return;
-
-	virtual void Run() {} // should be = 0 later...
-	void Start();
-
-	bool is_initialized() const { return is_initialized_; }
-
+  void Start();
+  bool is_initialized() const { return is_initialized_; }
 private:
-friend class Scheduler;
-	void Stub();
-
+  void Stub();
 protected:
-	u64 thread_id;
-	u64 priority;
+  u64 thread_id;
+  u64 priority;
 
-	struct {
-		// registers:
-		u64 reg[kNumReg];
-		Page *stack;
-	} context;
+  Context ctx;
 
-	enum {
-		Ready, Running, Blocked, Exited
-	} states;
+  enum {
+    Ready, Running, Blocked, Exited
+  } states;
 
-	bool is_initialized_;
+  bool is_initialized_;
 };
 
 }
